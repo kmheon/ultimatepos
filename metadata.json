@@ -1,0 +1,6 @@
+{
+  "name": "UltimatePOS",
+  "description": "Comprehensive Point of Sale, Inventory Management, Billing, and Business Analytics application.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
