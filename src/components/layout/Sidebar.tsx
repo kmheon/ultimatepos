@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -82,6 +82,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse 
     settings: false,
   });
 
+  useEffect(() => {
+    if (activeTab === 'import' || activeTab === 'settings') {
+      setOpenSections(prev => ({ ...prev, settings: true }));
+    }
+  }, [activeTab]);
+
   const lowStockCount = products.filter(p => p.currentStock <= p.alertQuantity).length;
   const activeRepairsCount = repairJobSheets.filter(r => r.status === 'pending' || r.status === 'diagnosing' || r.status === 'awaiting_parts').length;
   const activeQuotesCount = quotations.filter(q => q.status === 'sent' || q.status === 'draft').length;
@@ -121,19 +127,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse 
         { name: 'Technicians', tab: 'services' },
         { name: 'Schedule', tab: 'services' },
         { name: 'Reports', tab: 'services' },
-      ]
-    },
-    {
-      id: 'data_import',
-      title: 'Data Migration / Import',
-      icon: Database,
-      tab: 'import',
-      badge: 'UltimatePOS',
-      badgeColor: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold',
-      subItems: [
-        { name: 'Import UltimatePOS Data', tab: 'import' },
-        { name: 'SQL Dump Parser', tab: 'import' },
-        { name: '1-Click Dataset Sync', tab: 'import' },
       ]
     },
     {
@@ -342,6 +335,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse 
         { name: 'Receipt Printers', tab: 'settings' },
         { name: 'Tax Rates', tab: 'settings' },
         { name: 'Types of service', tab: 'settings' },
+        { name: 'Data Migration', tab: 'import', badge: 'Enterprise', badgeColor: 'bg-blue-600 text-white font-bold' },
       ]
     },
   ];
