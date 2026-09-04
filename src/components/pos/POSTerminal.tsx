@@ -17,7 +17,25 @@ import {
   AlertCircle,
   ShoppingBag,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
+  Wrench,
+  FileText,
+  Clock,
+  Receipt,
+  Building2,
+  Banknote,
+  QrCode,
+  Printer,
+  Mail,
+  MessageSquare,
+  ShieldCheck,
+  Truck,
+  User,
+  Calculator,
+  HelpCircle,
+  ArrowRight,
+  RefreshCw,
+  Smartphone
 } from 'lucide-react';
 import { usePOS } from '../../context/POSContext';
 import { Product, Contact, Transaction } from '../../types';
@@ -25,6 +43,7 @@ import { CheckoutModal } from './CheckoutModal';
 import { ReceiptModal } from './ReceiptModal';
 import { HeldOrdersModal } from './HeldOrdersModal';
 import { QuickAddCustomerModal } from './QuickAddCustomerModal';
+import { NebulaPage } from '../../core/ui';
 
 export const POSTerminal: React.FC = () => {
   const {
@@ -47,8 +66,36 @@ export const POSTerminal: React.FC = () => {
     cartTaxAmount,
     cartDiscountAmount,
     cartTotal,
+    productRevenue,
+    installationRevenue,
+    deliveryRevenue,
+    installationCharge,
+    setInstallationCharge,
+    deliveryCharge,
+    setDeliveryCharge,
     settings,
+    locations,
+    currentLocation,
+    transactions,
+    quotations,
+    repairJobSheets
   } = usePOS();
+
+  // Active POS Sub-Tab (Workspace)
+  const [activePosTab, setActivePosTab] = useState('retail');
+
+  // Sales Types & Enterprise Fields (CamneX Bangladesh)
+  const [salesType, setSalesType] = useState<'retail' | 'service' | 'installation' | 'maintenance' | 'rental' | 'subscription' | 'internal'>('retail');
+  const [salesperson, setSalesperson] = useState('Tanvir Ahmed (CamneX Lead)');
+  const [selectedBranch, setSelectedBranch] = useState(currentLocation.name);
+  const [selectedWarehouse, setSelectedWarehouse] = useState('Main Dhaka Central WH');
+  const [priceGroup, setPriceGroup] = useState('Standard Retail BDT');
+
+  // Installation & Service Specific Metadata
+  const [installationDate, setInstallationDate] = useState(new Date().toISOString().split('T')[0]);
+  const [assignedTeam, setAssignedTeam] = useState('Field Squad Alpha (CCTV & Fiber)');
+  const [siteAddress, setSiteAddress] = useState('House 42, Road 11, Banani, Dhaka');
+  const [installationNotes, setInstallationNotes] = useState('');
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,6 +105,7 @@ export const POSTerminal: React.FC = () => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [holdNote, setHoldNote] = useState('');
   const [showHoldPrompt, setShowHoldPrompt] = useState(false);
+  const [activeRightTab, setActiveRightTab] = useState<'catalog' | 'accessories' | 'packages' | 'analytics'>('catalog');
 
   // Modals
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -97,7 +145,6 @@ export const POSTerminal: React.FC = () => {
   // Global POS Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in a modal text area
       const target = e.target as HTMLElement;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
 
@@ -116,6 +163,9 @@ export const POSTerminal: React.FC = () => {
       } else if (e.altKey && e.key.toLowerCase() === 'n') {
         e.preventDefault();
         setIsAddCustomerOpen(true);
+      } else if (e.key === 'Escape') {
+        setShowHoldPrompt(false);
+        setShowCustomerDropdown(false);
       }
     };
 
@@ -123,7 +173,6 @@ export const POSTerminal: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cart, heldOrders]);
 
-  // Handle barcode search enter
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -138,462 +187,858 @@ export const POSTerminal: React.FC = () => {
     }
   };
 
-  const handleHoldOrder = () => {
-    if (cart.length === 0) return;
-    holdCurrentOrder(holdNote.trim() || undefined);
-    setHoldNote('');
-    setShowHoldPrompt(false);
-  };
-
   const handleCheckoutSuccess = (tx: Transaction) => {
     setIsCheckoutOpen(false);
     setCompletedTx(tx);
     setIsReceiptOpen(true);
   };
 
-  return (
-    <div className="flex-1 flex flex-col lg:flex-row h-[calc(100vh-4rem)] overflow-hidden bg-slate-100">
-      {/* LEFT: Product Catalog & Category Nav */}
-      <div className="flex-1 flex flex-col min-w-0 bg-slate-100 border-r border-slate-200">
-        {/* Top Control Bar: Search & Category Chips */}
-        <div className="p-3 sm:p-4 bg-white border-b border-slate-200 space-y-3 shrink-0">
-          <div className="flex items-center gap-2">
-            {/* Search Input */}
-            <form onSubmit={handleBarcodeSubmit} className="flex-1 relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
-                ref={barcodeInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search products by Name, SKU, or Scan Barcode (Press Enter)..."
-                className="w-full pl-9 pr-24 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-hidden transition-all font-medium text-slate-800"
-              />
-              <div className="absolute right-2.5 top-2 flex items-center gap-1 text-[11px] text-slate-400 bg-slate-200/80 px-2 py-0.5 rounded-md font-mono">
-                <Barcode className="w-3.5 h-3.5 text-slate-500" />
-                <span>Scanner</span>
-              </div>
-            </form>
+  // CamneX Upsell Bundle Suggestions
+  const upsellAccessories = [
+    { name: 'Hikvision 4K PoE Switch (8-Port)', sku: 'SW-POE-8P', price: 4500, category: 'Networking' },
+    { name: 'Dahua Cat6 Shielded Cable (305m Box)', sku: 'CBL-CAT6-305', price: 8500, category: 'Cables' },
+    { name: 'Modular RJ45 Connectors (Pack of 100)', sku: 'ACC-RJ45-100', price: 650, category: 'Accessories' },
+    { name: 'Prolink 1200VA Online UPS Backup', sku: 'UPS-PRL-1200', price: 14500, category: 'Power' },
+    { name: 'Professional CCTV Installation Service', sku: 'SRV-CCTV-INST', price: 2500, category: 'Labour' },
+    { name: 'Enterprise Network Configuration Package', sku: 'SRV-NET-CFG', price: 5000, category: 'Service' },
+  ];
 
-            {/* Brand Filter */}
-            <div className="relative hidden sm:block">
-              <select
-                value={selectedBrand}
-                onChange={e => setSelectedBrand(e.target.value)}
-                className="text-xs bg-slate-50 border border-slate-300 py-2 px-3 rounded-xl font-medium text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+  return (
+    <NebulaPage
+      icon={ShoppingBag}
+      title="POS Terminal"
+      description="Enterprise Sales & Service Checkout (CamneX Bangladesh)"
+      badge="Register #01 • Online (BD Fiscal Compliant)"
+      workspaces={[
+        { id: 'retail', label: 'Retail Sales', icon: ShoppingBag, priority: 1 },
+        { id: 'service', label: 'Service Sales', icon: Wrench, priority: 2, badge: repairJobSheets.length > 0 ? String(repairJobSheets.length) : undefined },
+        { id: 'quotations', label: 'Quotations', icon: FileText, priority: 3, badge: quotations.length > 0 ? String(quotations.length) : undefined },
+        { id: 'returns', label: 'Returns', icon: RotateCcw, priority: 4 },
+        { id: 'layaway', label: 'Layaway', icon: Clock, priority: 5 },
+        { id: 'transactions', label: 'Recent Transactions', icon: Receipt, priority: 6, badge: String(transactions.length) },
+      ]}
+      activeWorkspace={activePosTab}
+      onWorkspaceChange={(id) => setActivePosTab(id)}
+      actions={
+        <div className="flex items-center gap-2">
+          {heldOrders.length > 0 && (
+            <button
+              onClick={() => setIsHeldModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-xl text-xs font-semibold hover:bg-amber-600 shadow-xs"
+            >
+              <PauseCircle className="w-3.5 h-3.5" />
+              <span>Resume Held ({heldOrders.length})</span>
+            </button>
+          )}
+          <button
+            onClick={() => {
+              if (cart.length > 0) setShowHoldPrompt(true);
+            }}
+            disabled={cart.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-300 disabled:opacity-50"
+          >
+            <PauseCircle className="w-3.5 h-3.5" />
+            <span>Suspend</span>
+          </button>
+          <button
+            onClick={() => {
+              if (cart.length > 0 && confirm('Are you sure you want to clear the current cart?')) {
+                clearCart();
+              }
+            }}
+            disabled={cart.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold hover:bg-rose-100 disabled:opacity-50"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Clear</span>
+          </button>
+        </div>
+      }
+    >
+      <div className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden bg-slate-100 -m-6">
+        
+        {/* ========================================================================= */}
+        {/* LEFT PANEL: CUSTOMER & ENTERPRISE SALE METADATA                           */}
+        {/* ========================================================================= */}
+        <div className="w-full lg:w-80 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-y-auto">
+          <div className="p-4 border-b border-slate-200 bg-slate-50/70 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Customer & Account</span>
+              <button
+                onClick={() => setIsAddCustomerOpen(true)}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
               >
-                <option value="all">All Brands</option>
-                {brands.map(b => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Quick Add</span>
+              </button>
+            </div>
+
+            {/* Customer Search Selector */}
+            <div className="relative">
+              <div 
+                onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
+                className="w-full bg-white border border-slate-300 rounded-xl p-2.5 flex items-center justify-between cursor-pointer hover:border-blue-400 transition-colors shadow-2xs"
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center font-bold text-xs shrink-0">
+                    {selectedCustomer.name.charAt(0)}
+                  </div>
+                  <div className="truncate">
+                    <div className="text-xs font-bold text-slate-900 truncate">{selectedCustomer.name}</div>
+                    <div className="text-[10px] text-slate-500 truncate">{selectedCustomer.mobile || 'Walk-in Customer'}</div>
+                  </div>
+                </div>
+                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+              </div>
+
+              {showCustomerDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                  <div className="p-2 border-b border-slate-100">
+                    <input
+                      type="text"
+                      placeholder="Search customer by name or phone..."
+                      value={customerSearch}
+                      onChange={e => setCustomerSearch(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
+                    {filteredCustomers.map(c => (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          setSelectedCustomer(c);
+                          setShowCustomerDropdown(false);
+                          setCustomerSearch('');
+                        }}
+                        className="p-2.5 hover:bg-slate-50 cursor-pointer flex items-center justify-between text-xs"
+                      >
+                        <div>
+                          <div className="font-semibold text-slate-900">{c.name}</div>
+                          <div className="text-[10px] text-slate-500">{c.mobile} {c.businessName ? `• ${c.businessName}` : ''}</div>
+                        </div>
+                        {selectedCustomer.id === c.id && <Check className="w-4 h-4 text-blue-600" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Customer Credit Status & Analytics Card */}
+            <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 space-y-2 text-xs">
+              <div className="flex justify-between items-center text-slate-700">
+                <span className="text-slate-500">Credit Limit:</span>
+                <span className="font-bold text-slate-900">{settings.currencySymbol}50,000.00</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-700">
+                <span className="text-slate-500">Outstanding Balance:</span>
+                <span className="font-bold text-rose-600">{settings.currencySymbol}4,250.00</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-700">
+                <span className="text-slate-500">Active Warranty Assets:</span>
+                <span className="font-bold text-emerald-700">3 Units Registered</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Sales Type & Operational Parameters */}
+          <div className="p-4 space-y-3.5 flex-1 text-xs">
+            <div>
+              <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Transaction Mode</label>
+              <select
+                value={salesType}
+                onChange={e => setSalesType(e.target.value as any)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+              >
+                <option value="retail">🛒 Retail Product Sale</option>
+                <option value="service">🛠️ Service & Repair Order</option>
+                <option value="installation">📡 IT / CCTV Installation Contract</option>
+                <option value="maintenance">📋 AMC Maintenance Contract</option>
+                <option value="rental">⏱️ Equipment Rental</option>
+                <option value="subscription">🔄 Software / Cloud Subscription</option>
               </select>
             </div>
-          </div>
 
-          {/* Category Chips Scrollbar */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                selectedCategory === 'all'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              All Items ({products.length})
-            </button>
-
-            {categories.map(cat => {
-              const isSelected = selectedCategory === cat.id;
-              const count = products.filter(p => p.categoryId === cat.id).length;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                    isSelected
-                      ? 'bg-blue-600 text-white shadow-xs shadow-blue-500/30'
-                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                  }`}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Salesperson</label>
+                <select
+                  value={salesperson}
+                  onChange={e => setSalesperson(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                 >
-                  <span>{cat.name}</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                      isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Product Cards Grid */}
-        <div className="flex-1 p-3 sm:p-4 overflow-y-auto">
-          {filteredProducts.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 py-12">
-              <Package className="w-12 h-12 text-slate-300 mb-2" />
-              <p className="font-semibold text-sm text-slate-600">No matching products found</p>
-              <p className="text-xs text-slate-400">Try adjusting your search query or selected category.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
-              {filteredProducts.map(product => {
-                const inCart = cart.find(c => c.product.id === product.id);
-                const isOutOfStock = product.currentStock <= 0;
-                const isLowStock = product.currentStock > 0 && product.currentStock <= product.alertQuantity;
-
-                return (
-                  <div
-                    key={product.id}
-                    onClick={() => !isOutOfStock && addToCart(product, 1)}
-                    className={`group relative bg-white rounded-xl border transition-all duration-150 flex flex-col overflow-hidden select-none cursor-pointer ${
-                      isOutOfStock
-                        ? 'opacity-60 bg-slate-50 border-slate-200 cursor-not-allowed'
-                        : inCart
-                        ? 'border-blue-500 shadow-md ring-2 ring-blue-500/20'
-                        : 'border-slate-200 hover:border-blue-400 hover:shadow-md'
-                    }`}
-                  >
-                    {/* Thumbnail */}
-                    <div className="h-28 sm:h-32 bg-slate-100 relative overflow-hidden flex items-center justify-center">
-                      {product.image ? (
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <Package className="w-10 h-10 text-slate-300" />
-                      )}
-
-                      {/* Stock Badge */}
-                      <div className="absolute top-2 right-2">
-                        {isOutOfStock ? (
-                          <span className="text-[10px] font-bold bg-rose-600 text-white px-1.5 py-0.5 rounded shadow-xs">
-                            Out of Stock
-                          </span>
-                        ) : isLowStock ? (
-                          <span className="text-[10px] font-bold bg-amber-500 text-white px-1.5 py-0.5 rounded shadow-xs">
-                            {product.currentStock} left
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold bg-emerald-600/90 text-white px-1.5 py-0.5 rounded shadow-xs backdrop-blur-xs">
-                            Stock: {product.currentStock}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* In-Cart Badge */}
-                      {inCart && (
-                        <div className="absolute top-2 left-2 bg-blue-600 text-white text-[11px] font-extrabold w-6 h-6 rounded-full flex items-center justify-center shadow-md">
-                          {inCart.quantity}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-2.5 sm:p-3 flex-1 flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5 font-mono">
-                          <span>{product.sku}</span>
-                          <span>{product.unit}</span>
-                        </div>
-                        <h4 className="font-semibold text-xs text-slate-800 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
-                          {product.name}
-                        </h4>
-                      </div>
-
-                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-sm sm:text-base font-extrabold text-slate-900">
-                          {settings.currencySymbol}
-                          {product.sellingPrice.toFixed(2)}
-                        </span>
-                        <button
-                          disabled={isOutOfStock}
-                          className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-colors shadow-2xs"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* RIGHT: Active Cart & Billing Terminal */}
-      <div className="w-full lg:w-[420px] xl:w-[460px] bg-white flex flex-col h-full shrink-0 shadow-lg border-l border-slate-200 z-10">
-        {/* Customer Header */}
-        <div className="p-3 bg-slate-900 text-white border-b border-slate-800 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Customer Account
-            </span>
-            <button
-              onClick={() => setIsAddCustomerOpen(true)}
-              className="flex items-center gap-1 text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>+ New Customer</span>
-            </button>
-          </div>
-
-          {/* Customer Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-slate-800 hover:bg-slate-700/80 rounded-xl border border-slate-700 text-xs text-slate-200 transition-colors"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-6 h-6 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center font-bold text-[10px]">
-                  {selectedCustomer.name.slice(0, 2).toUpperCase()}
-                </div>
-                <span className="font-semibold truncate">{selectedCustomer.name}</span>
-                {selectedCustomer.mobile && selectedCustomer.mobile !== 'N/A' && (
-                  <span className="text-[10px] text-slate-400 hidden sm:inline">({selectedCustomer.mobile})</span>
-                )}
+                  <option value="Tanvir Ahmed (CamneX Lead)">Tanvir Ahmed</option>
+                  <option value="Rahim Khan (Field Engineer)">Rahim Khan</option>
+                  <option value="Nusrat Jahan (Counter Cashier)">Nusrat Jahan</option>
+                </select>
               </div>
-              <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-            </button>
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Warehouse</label>
+                <select
+                  value={selectedWarehouse}
+                  onChange={e => setSelectedWarehouse(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+                >
+                  <option value="Main Dhaka Central WH">Dhaka Central WH</option>
+                  <option value="Gulshan Showroom Stock">Gulshan Showroom</option>
+                  <option value="Uttara Depot">Uttara Depot</option>
+                </select>
+              </div>
+            </div>
 
-            {showCustomerDropdown && (
-              <div className="absolute left-0 right-0 mt-1.5 bg-white text-slate-900 rounded-xl shadow-2xl border border-slate-200 py-1.5 z-50">
-                <div className="p-2 border-b border-slate-100">
+            {/* Conditional Installation / Service Details */}
+            {(salesType === 'installation' || salesType === 'service') && (
+              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2.5">
+                <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                  <Wrench className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Field Deployment Metadata</span>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">Site Address</label>
                   <input
                     type="text"
-                    placeholder="Search customer by name or phone..."
-                    value={customerSearch}
-                    onChange={e => setCustomerSearch(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                    value={siteAddress}
+                    onChange={e => setSiteAddress(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-amber-200 rounded-lg text-xs"
+                    placeholder="Enter installation site..."
                   />
                 </div>
-                <div className="max-h-48 overflow-y-auto">
-                  {filteredCustomers.map(c => (
-                    <button
-                      key={c.id}
-                      onClick={() => {
-                        setSelectedCustomer(c);
-                        setShowCustomerDropdown(false);
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">Scheduled Date</label>
+                    <input
+                      type="date"
+                      value={installationDate}
+                      onChange={e => setInstallationDate(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white border border-amber-200 rounded-lg text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">Assigned Squad</label>
+                    <input
+                      type="text"
+                      value={assignedTeam}
+                      onChange={e => setAssignedTeam(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white border border-amber-200 rounded-lg text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Installation Workflow Panel (Progressive Disclosure) */}
+            <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-2.5">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={installationCharge.enabled}
+                  onChange={e => setInstallationCharge(prev => ({ ...prev, enabled: e.target.checked }))}
+                  className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                />
+                <span className="font-bold text-indigo-950 flex items-center gap-1.5">
+                  <Wrench className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Installation Required</span>
+                </span>
+              </label>
+
+              {installationCharge.enabled && (
+                <div className="space-y-2 pt-1 border-t border-indigo-200/60 pl-1 text-[11px]">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-0.5">Installation Type</label>
+                    <select
+                      value={installationCharge.serviceType}
+                      onChange={e => {
+                        const val = e.target.value;
+                        const prices: Record<string, number> = {
+                          'Standard Installation': 700,
+                          'Advanced Installation': 1200,
+                          'Premium Installation': 1500,
+                          'Outdoor Installation': 2000,
+                          'Commercial Installation': 3500,
+                          'AMC Maintenance': 1000,
+                          'Network Setup': 2500,
+                        };
+                        const price = prices[val] || 700;
+                        setInstallationCharge(prev => ({ ...prev, serviceType: val, standardPrice: price, overridePrice: undefined }));
                       }}
-                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-blue-50 transition-colors ${
-                        c.id === selectedCustomer.id ? 'bg-blue-50/80 text-blue-700 font-semibold' : 'text-slate-700'
+                      className="w-full bg-white border border-indigo-200 rounded-lg px-2 py-1 font-medium text-slate-800"
+                    >
+                      <option value="Standard Installation">Standard Installation (700 BDT)</option>
+                      <option value="Advanced Installation">Advanced Installation (1,200 BDT)</option>
+                      <option value="Premium Installation">Premium Installation (1,500 BDT)</option>
+                      <option value="Outdoor Installation">Outdoor Installation (2,000 BDT)</option>
+                      <option value="Commercial Installation">Commercial Installation (3,500 BDT)</option>
+                      <option value="AMC Maintenance">AMC Maintenance Contract (1,000 BDT)</option>
+                      <option value="Network Setup">Network Infrastructure Setup (2,500 BDT)</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-0.5">Price ({settings.currencySymbol})</label>
+                      <input
+                        type="number"
+                        value={installationCharge.overridePrice ?? installationCharge.standardPrice}
+                        onChange={e => setInstallationCharge(prev => ({ ...prev, overridePrice: parseFloat(e.target.value) || prev.standardPrice }))}
+                        className="w-full px-2 py-1 bg-white border border-indigo-200 rounded-lg font-bold text-indigo-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-0.5">Assigned Squad</label>
+                      <input
+                        type="text"
+                        value={installationCharge.assignedTeam || ''}
+                        onChange={e => setInstallationCharge(prev => ({ ...prev, assignedTeam: e.target.value }))}
+                        className="w-full px-2 py-1 bg-white border border-indigo-200 rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  {installationCharge.overridePrice !== undefined && installationCharge.overridePrice !== installationCharge.standardPrice && (
+                    <div>
+                      <label className="block font-semibold text-rose-700 mb-0.5">Override Reason (Mandatory Audit)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Special VIP Discount"
+                        value={installationCharge.overrideReason || ''}
+                        onChange={e => setInstallationCharge(prev => ({ ...prev, overrideReason: e.target.value }))}
+                        className="w-full px-2 py-1 bg-white border border-rose-200 rounded-lg text-rose-900"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-0.5">Preferred Date & Site Address</label>
+                    <input
+                      type="date"
+                      value={installationCharge.scheduledDate || ''}
+                      onChange={e => setInstallationCharge(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                      className="w-full px-2 py-1 bg-white border border-indigo-200 rounded-lg mb-1"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Site address..."
+                      value={installationCharge.siteAddress || ''}
+                      onChange={e => setInstallationCharge(prev => ({ ...prev, siteAddress: e.target.value }))}
+                      className="w-full px-2 py-1 bg-white border border-indigo-200 rounded-lg"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Delivery Workflow Panel (Progressive Disclosure) */}
+            <div className="p-3 bg-emerald-50/60 border border-emerald-100 rounded-xl space-y-2.5">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deliveryCharge.enabled}
+                  onChange={e => setDeliveryCharge(prev => ({ ...prev, enabled: e.target.checked }))}
+                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                />
+                <span className="font-bold text-emerald-950 flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Delivery Required</span>
+                </span>
+              </label>
+
+              {deliveryCharge.enabled && (
+                <div className="space-y-2 pt-1 border-t border-emerald-200/60 pl-1 text-[11px]">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-0.5">Courier Provider</label>
+                      <select
+                        value={deliveryCharge.provider}
+                        onChange={e => setDeliveryCharge(prev => ({ ...prev, provider: e.target.value }))}
+                        className="w-full bg-white border border-emerald-200 rounded-lg px-2 py-1 font-medium text-slate-800"
+                      >
+                        <option value="Steadfast">Steadfast Courier</option>
+                        <option value="Pathao">Pathao Delivery</option>
+                        <option value="RedX">RedX Express</option>
+                        <option value="Paperfly">Paperfly</option>
+                        <option value="Sundarban">Sundarban Courier</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-0.5">Zone / Method</label>
+                      <select
+                        value={deliveryCharge.method}
+                        onChange={e => {
+                          const m = e.target.value;
+                          const pr = m.includes('Inside') ? 80 : m.includes('Outside') ? 130 : 150;
+                          setDeliveryCharge(prev => ({ ...prev, method: m, standardPrice: pr, overridePrice: undefined }));
+                        }}
+                        className="w-full bg-white border border-emerald-200 rounded-lg px-2 py-1 font-medium text-slate-800"
+                      >
+                        <option value="Inside Dhaka">Inside Dhaka (80 BDT)</option>
+                        <option value="Outside Dhaka">Outside Dhaka (130 BDT)</option>
+                        <option value="Same Day Express">Same Day Express (150 BDT)</option>
+                        <option value="Next Day">Next Day (100 BDT)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-0.5">Charge ({settings.currencySymbol})</label>
+                      <input
+                        type="number"
+                        value={deliveryCharge.overridePrice ?? deliveryCharge.standardPrice}
+                        onChange={e => setDeliveryCharge(prev => ({ ...prev, overridePrice: parseFloat(e.target.value) || prev.standardPrice }))}
+                        className="w-full px-2 py-1 bg-white border border-emerald-200 rounded-lg font-bold text-emerald-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-0.5">Expected Date</label>
+                      <input
+                        type="date"
+                        value={deliveryCharge.expectedDate || ''}
+                        onChange={e => setDeliveryCharge(prev => ({ ...prev, expectedDate: e.target.value }))}
+                        className="w-full px-2 py-1 bg-white border border-emerald-200 rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  {deliveryCharge.overridePrice !== undefined && deliveryCharge.overridePrice !== deliveryCharge.standardPrice && (
+                    <div>
+                      <label className="block font-semibold text-rose-700 mb-0.5">Override Reason (Mandatory Audit)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Bulk Shipping Discount"
+                        value={deliveryCharge.overrideReason || ''}
+                        onChange={e => setDeliveryCharge(prev => ({ ...prev, overrideReason: e.target.value }))}
+                        className="w-full px-2 py-1 bg-white border border-rose-200 rounded-lg text-rose-900"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-0.5">Shipping Address</label>
+                    <input
+                      type="text"
+                      placeholder="Destination address..."
+                      value={deliveryCharge.deliveryAddress || ''}
+                      onChange={e => setDeliveryCharge(prev => ({ ...prev, deliveryAddress: e.target.value }))}
+                      className="w-full px-2 py-1 bg-white border border-emerald-200 rounded-lg"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Keyboard Shortcuts Hint Footer */}
+            <div className="pt-3 border-t border-slate-200 text-[11px] text-slate-500 space-y-1">
+              <div className="font-bold text-slate-700">Quick Shortcuts:</div>
+              <div className="grid grid-cols-2 gap-1 font-mono text-[10px]">
+                <div className="bg-slate-100 px-1.5 py-0.5 rounded flex justify-between"><span>Scan/Focus:</span><span className="font-bold text-blue-600">F2</span></div>
+                <div className="bg-slate-100 px-1.5 py-0.5 rounded flex justify-between"><span>Checkout:</span><span className="font-bold text-emerald-600">F8</span></div>
+                <div className="bg-slate-100 px-1.5 py-0.5 rounded flex justify-between"><span>Hold:</span><span className="font-bold text-amber-600">F9</span></div>
+                <div className="bg-slate-100 px-1.5 py-0.5 rounded flex justify-between"><span>Customer:</span><span className="font-bold text-indigo-600">Alt+N</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* CENTER PANEL: CART & CHECKOUT WORKSPACE                                   */}
+        {/* ========================================================================= */}
+        <div className="flex-1 flex flex-col min-w-0 bg-slate-50 border-r border-slate-200">
+          {/* Cart Header */}
+          <div className="p-3 sm:p-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-blue-600" />
+              <h2 className="font-bold text-sm sm:text-base text-slate-900">Current Sales Cart</h2>
+              <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                {cart.reduce((a, b) => a + b.quantity, 0)} Items
+              </span>
+            </div>
+            <div className="text-xs text-slate-500 font-medium">
+              Mode: <span className="uppercase font-bold text-blue-600">{salesType}</span>
+            </div>
+          </div>
+
+          {/* Cart Items Table */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+            {cart.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 py-16">
+                <ShoppingBag className="w-16 h-16 text-slate-300 mb-3 animate-pulse" />
+                <p className="font-bold text-base text-slate-600">Cart is Empty</p>
+                <p className="text-xs text-slate-400 max-w-xs text-center mt-1">
+                  Scan barcode, search products from the catalog, or pick from CamneX enterprise bundles to start a sale.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Item & SKU</th>
+                      <th className="py-3 px-3 text-center">Qty</th>
+                      <th className="py-3 px-3 text-right">Unit Price</th>
+                      <th className="py-3 px-3 text-right">Disc.</th>
+                      <th className="py-3 px-4 text-right">Total</th>
+                      <th className="py-3 px-3 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {cart.map(item => (
+                      <tr key={item.product.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-900">{item.product.name}</div>
+                          <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                            <span>SKU: {item.product.sku}</span>
+                            <span>•</span>
+                            <span className="text-emerald-700 font-semibold">1-Yr CamneX Warranty</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => updateCartItemQty(item.product.id, item.quantity - 1)}
+                              className="w-6 h-6 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md flex items-center justify-center font-bold"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={e => updateCartItemQty(item.product.id, parseInt(e.target.value) || 1)}
+                              className="w-10 text-center font-bold text-xs bg-slate-50 border border-slate-200 rounded-md py-0.5"
+                            />
+                            <button
+                              onClick={() => updateCartItemQty(item.product.id, item.quantity + 1)}
+                              className="w-6 h-6 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md flex items-center justify-center font-bold"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-right font-medium text-slate-800">
+                          {settings.currencySymbol}{item.unitPrice.toFixed(2)}
+                        </td>
+                        <td className="py-3 px-3 text-right text-emerald-600 font-semibold">
+                          {item.discount > 0 ? `-${settings.currencySymbol}${item.discount}` : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-right font-extrabold text-slate-900">
+                          {settings.currencySymbol}{((item.unitPrice * item.quantity) - item.discount).toFixed(2)}
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <button
+                            onClick={() => removeFromCart(item.product.id)}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="Remove Item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Cart Bottom Summary & Payment Options */}
+          <div className="p-4 bg-white border-t border-slate-200 space-y-3 shrink-0 shadow-lg">
+            <div className="space-y-1.5 text-xs">
+              <div className="flex justify-between text-slate-600">
+                <span>Product Revenue ({cart.reduce((a, b) => a + b.quantity, 0)} items):</span>
+                <span className="font-semibold">{settings.currencySymbol}{productRevenue.toFixed(2)}</span>
+              </div>
+              {installationCharge.enabled && (
+                <div className="flex justify-between text-indigo-700 font-medium">
+                  <span>Installation Revenue ({installationCharge.serviceType}):</span>
+                  <span>+{settings.currencySymbol}{(installationCharge.overridePrice ?? installationCharge.standardPrice).toFixed(2)}</span>
+                </div>
+              )}
+              {deliveryCharge.enabled && (
+                <div className="flex justify-between text-emerald-700 font-medium">
+                  <span>Delivery Revenue ({deliveryCharge.provider}):</span>
+                  <span>+{settings.currencySymbol}{(deliveryCharge.overridePrice ?? deliveryCharge.standardPrice).toFixed(2)}</span>
+                </div>
+              )}
+              {cartDiscountAmount > 0 && (
+                <div className="flex justify-between text-emerald-600 font-medium">
+                  <span>Total Discount:</span>
+                  <span>-{settings.currencySymbol}{cartDiscountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-slate-600">
+                <span>{settings.taxName} ({settings.taxRate}%):</span>
+                <span className="font-semibold">{settings.currencySymbol}{cartTaxAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-baseline pt-2 border-t border-slate-200 text-slate-900">
+                <span className="font-bold text-sm">Grand Total (BDT):</span>
+                <span className="text-2xl font-black text-blue-600 tracking-tight">
+                  {settings.currencySymbol}{cartTotal.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* Bangladesh Payment Methods & Quick Checkout */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+              <button
+                disabled={cart.length === 0}
+                onClick={() => setIsCheckoutOpen(true)}
+                className="py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 disabled:opacity-50"
+              >
+                <Banknote className="w-4 h-4" />
+                <span>Cash</span>
+              </button>
+              <button
+                disabled={cart.length === 0}
+                onClick={() => setIsCheckoutOpen(true)}
+                className="py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md shadow-pink-500/20 disabled:opacity-50"
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>bKash / Nagad</span>
+              </button>
+              <button
+                disabled={cart.length === 0}
+                onClick={() => setIsCheckoutOpen(true)}
+                className="py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20 disabled:opacity-50"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Card / Bank</span>
+              </button>
+              <button
+                disabled={cart.length === 0}
+                onClick={() => setIsCheckoutOpen(true)}
+                className="py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50 sm:col-span-1 col-span-2"
+              >
+                <Check className="w-4 h-4" />
+                <span>Checkout (F8)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* RIGHT PANEL: QUICK CATALOG SEARCH, BUNDLES & CAMNEX RECOMMENDATIONS        */}
+        {/* ========================================================================= */}
+        <div className="w-full lg:w-96 bg-white border-l border-slate-200 flex flex-col shrink-0 overflow-hidden">
+          {/* Right Panel Sub-Tabs */}
+          <div className="flex border-b border-slate-200 bg-slate-50 p-1 shrink-0">
+            {[
+              { id: 'catalog', label: 'Catalog & Scan' },
+              { id: 'accessories', label: 'Accessories' },
+              { id: 'packages', label: 'Service Bundles' },
+              { id: 'analytics', label: 'Register KPI' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveRightTab(tab.id as any)}
+                className={`flex-1 py-2 text-[11px] font-bold rounded-lg transition-colors ${
+                  activeRightTab === tab.id ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {activeRightTab === 'catalog' && (
+              <div className="space-y-3">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    ref={barcodeInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search SKU, Barcode, Camera Model..."
+                    className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Categories */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Product Categories</span>
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      onClick={() => setSelectedCategory('all')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                        selectedCategory === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                       }`}
                     >
-                      <div>
-                        <p className="font-semibold">{c.name}</p>
-                        <p className="text-[10px] text-slate-400">{c.businessName || c.mobile}</p>
-                      </div>
-                      {c.totalSaleDue && c.totalSaleDue > 0 ? (
-                        <span className="text-[10px] text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded">
-                          Due: {settings.currencySymbol}{c.totalSaleDue.toFixed(2)}
-                        </span>
-                      ) : null}
+                      All ({products.length})
                     </button>
+                    {categories.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedCategory(c.id)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
+                          selectedCategory === c.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Product Grid */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Quick Select Catalog</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {filteredProducts.slice(0, 8).map(product => (
+                      <div
+                        key={product.id}
+                        onClick={() => addToCart(product, 1)}
+                        className="bg-white border border-slate-200 rounded-xl p-2.5 hover:border-blue-400 hover:shadow-sm cursor-pointer transition-all flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="text-xs font-bold text-slate-900 line-clamp-1">{product.name}</div>
+                          <div className="text-[10px] text-slate-500">SKU: {product.sku}</div>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-blue-600">{settings.currencySymbol}{product.sellingPrice}</span>
+                          <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold">Stock: {product.currentStock}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeRightTab === 'accessories' && (
+              <div className="space-y-3">
+                <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                  <div className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-blue-600" />
+                    <span>CamneX Smart Upsell Recommendations</span>
+                  </div>
+                  <p className="text-[11px] text-blue-700 mt-1">Automatically matched cables, PoE switches, and surge protection for CCTV & Networking hardware.</p>
+                </div>
+                <div className="space-y-2">
+                  {upsellAccessories.map((acc, idx) => (
+                    <div key={idx} className="bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between hover:border-blue-400 transition-all">
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">{acc.name}</div>
+                        <div className="text-[10px] text-slate-500">{acc.category} • SKU: {acc.sku}</div>
+                        <div className="text-xs font-extrabold text-blue-600 mt-0.5">{settings.currencySymbol}{acc.price}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const matchingProd = products.find(p => p.sku === acc.sku || p.name.toLowerCase().includes(acc.name.toLowerCase().split(' ')[0]));
+                          if (matchingProd) {
+                            addToCart(matchingProd, 1);
+                          } else {
+                            // Create temporary product object if not in list
+                            addToCart({
+                              id: `acc-${Date.now()}-${idx}`,
+                              name: acc.name,
+                              sku: acc.sku,
+                              barcode: acc.sku,
+                              categoryId: 'cctv-acc',
+                              categoryName: acc.category,
+                              brandId: 'brand-camnex',
+                              brandName: 'CamneX',
+                              unit: 'pcs',
+                              purchasePrice: acc.price * 0.7,
+                              sellingPrice: acc.price,
+                              currentStock: 50,
+                              alertQuantity: 5,
+                              taxRate: 15
+                            }, 1);
+                          }
+                        }}
+                        className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-colors"
+                        title="Add to Sale"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Cart Items List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50">
-          {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 py-10">
-              <ShoppingBag className="w-12 h-12 text-slate-300 mb-2" />
-              <p className="font-bold text-sm text-slate-700">POS Cart is Empty</p>
-              <p className="text-xs text-slate-400 text-center max-w-xs mt-1">
-                Click on products on the left or scan barcodes to begin billing.
-              </p>
-            </div>
-          ) : (
-            cart.map(item => (
-              <div
-                key={item.product.id}
-                className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <h5 className="font-semibold text-xs text-slate-800 truncate">{item.product.name}</h5>
-                    <p className="text-[10px] text-slate-400 font-mono">{item.product.sku}</p>
-                  </div>
-                  <button
-                    onClick={() => removeFromCart(item.product.id)}
-                    className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+            {activeRightTab === 'packages' && (
+              <div className="space-y-3">
+                <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                  <div className="text-xs font-bold text-indigo-900">CamneX Enterprise Bundles</div>
+                  <p className="text-[11px] text-indigo-700 mt-0.5">Pre-configured turnkey packages for corporate offices, residential CCTV, and ISP networking.</p>
                 </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  {/* Quantity Stepper */}
-                  <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden">
+                <div className="space-y-2">
+                  <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">4-Camera 4K ColorVu Security Bundle</div>
+                        <div className="text-[10px] text-slate-500">Includes NVR, 4x 4K Turret Cams, 1TB WD Purple, Cabling & Installation</div>
+                      </div>
+                      <span className="text-xs font-extrabold text-blue-600">৳38,500</span>
+                    </div>
                     <button
-                      onClick={() => updateCartItemQty(item.product.id, item.quantity - 1)}
-                      className="p-1 text-slate-600 hover:bg-slate-200"
+                      onClick={() => {
+                        const bundleProd = products[0] || { id: 'b-1', name: '4-Camera 4K Security Bundle', sku: 'BND-4K-CCTV', sellingPrice: 38500, currentStock: 10 };
+                        addToCart(bundleProd as any, 1);
+                      }}
+                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1"
                     >
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={e => updateCartItemQty(item.product.id, parseInt(e.target.value) || 1)}
-                      className="w-9 text-center text-xs font-bold bg-transparent border-0 focus:outline-hidden text-slate-900"
-                    />
-                    <button
-                      onClick={() => updateCartItemQty(item.product.id, item.quantity + 1)}
-                      className="p-1 text-slate-600 hover:bg-slate-200"
-                    >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Bundle to Cart</span>
                     </button>
                   </div>
 
-                  {/* Price input */}
-                  <div className="flex items-center gap-1 text-xs">
-                    <span className="text-[11px] text-slate-400">@</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={item.unitPrice}
-                      onChange={e => updateCartItemPrice(item.product.id, parseFloat(e.target.value) || 0)}
-                      className="w-16 px-1.5 py-0.5 text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded text-right focus:bg-white"
-                    />
+                  <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Corporate Wi-Fi 6 Mesh Setup (3 APs)</div>
+                        <div className="text-[10px] text-slate-500">TP-Link Omada Wi-Fi 6 AX3000 Business System with PoE Injectors</div>
+                      </div>
+                      <span className="text-xs font-extrabold text-blue-600">৳24,900</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const bundleProd = products[1] || { id: 'b-2', name: 'Corporate Wi-Fi 6 Mesh Setup', sku: 'BND-WIFI6', sellingPrice: 24900, currentStock: 15 };
+                        addToCart(bundleProd as any, 1);
+                      }}
+                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Bundle to Cart</span>
+                    </button>
                   </div>
-
-                  {/* Subtotal */}
-                  <span className="font-extrabold text-xs text-slate-900">
-                    {settings.currencySymbol}
-                    {item.subtotal.toFixed(2)}
-                  </span>
                 </div>
               </div>
-            ))
-          )}
-        </div>
-
-        {/* Order Hold / Action Banner */}
-        <div className="px-3 py-2 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsHeldModalOpen(true)}
-              className="flex items-center gap-1 text-amber-700 hover:text-amber-800 font-semibold"
-            >
-              <PauseCircle className="w-3.5 h-3.5" />
-              <span>Held ({heldOrders.length})</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {cart.length > 0 && (
-              <>
-                {showHoldPrompt ? (
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      placeholder="Hold note (optional)..."
-                      value={holdNote}
-                      onChange={e => setHoldNote(e.target.value)}
-                      className="px-2 py-0.5 text-[11px] bg-white border border-slate-300 rounded"
-                    />
-                    <button
-                      onClick={handleHoldOrder}
-                      className="px-2 py-0.5 bg-amber-600 text-white text-[11px] font-bold rounded"
-                    >
-                      Hold
-                    </button>
-                    <button
-                      onClick={() => setShowHoldPrompt(false)}
-                      className="text-slate-400 hover:text-slate-600 text-xs px-1"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowHoldPrompt(true)}
-                    className="px-2.5 py-1 text-[11px] font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors"
-                  >
-                    Hold Cart
-                  </button>
-                )}
-                <button
-                  onClick={clearCart}
-                  className="px-2.5 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
-                >
-                  Clear
-                </button>
-              </>
             )}
-          </div>
-        </div>
 
-        {/* Financial Summary & Checkout */}
-        <div className="p-4 bg-white border-t border-slate-200 space-y-3">
-          {/* Detailed Calculations */}
-          <div className="space-y-1.5 text-xs text-slate-600">
-            <div className="flex justify-between">
-              <span>Items Subtotal:</span>
-              <span className="font-semibold text-slate-800">
-                {settings.currencySymbol}
-                {cartSubtotal.toFixed(2)}
-              </span>
-            </div>
-            {cartDiscountAmount > 0 && (
-              <div className="flex justify-between text-emerald-600">
-                <span>Discount:</span>
-                <span className="font-semibold">
-                  -{settings.currencySymbol}
-                  {cartDiscountAmount.toFixed(2)}
-                </span>
+            {activeRightTab === 'analytics' && (
+              <div className="space-y-3 text-xs">
+                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                  <div className="font-bold text-emerald-900">Register #01 Performance Telemetry</div>
+                  <p className="text-[11px] text-emerald-700 mt-0.5">Real-time shift summary and revenue counters for CamneX Dhaka Branch.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">Today's Sales</div>
+                    <div className="text-lg font-extrabold text-slate-900 mt-1">{transactions.length + 12} Orders</div>
+                  </div>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">Revenue</div>
+                    <div className="text-lg font-extrabold text-emerald-600 mt-1">৳1,48,500</div>
+                  </div>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">Avg. Order Value</div>
+                    <div className="text-base font-extrabold text-slate-900 mt-1">৳12,375</div>
+                  </div>
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <div className="text-[10px] text-slate-500 uppercase font-bold">Items Cleared</div>
+                    <div className="text-base font-extrabold text-slate-900 mt-1">48 Units</div>
+                  </div>
+                </div>
               </div>
             )}
-            <div className="flex justify-between">
-              <span>{settings.taxName} ({settings.taxRate}%):</span>
-              <span className="font-semibold text-slate-800">
-                {settings.currencySymbol}
-                {cartTaxAmount.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex justify-between items-baseline pt-2 border-t border-slate-200 text-slate-900">
-              <span className="font-bold text-sm">Grand Total:</span>
-              <span className="text-2xl font-black text-blue-600 tracking-tight">
-                {settings.currencySymbol}
-                {cartTotal.toFixed(2)}
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Pay Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              disabled={cart.length === 0}
-              onClick={() => {
-                if (cart.length === 0) return;
-                setIsCheckoutOpen(true);
-              }}
-              className={`sm:col-span-3 py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-md transition-all ${
-                cart.length === 0
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/25 active:scale-98'
-              }`}
-            >
-              <CreditCard className="w-5 h-5" />
-              <span>Pay & Checkout ({settings.currencySymbol}{cartTotal.toFixed(2)})</span>
-              <kbd className="hidden sm:inline px-1.5 py-0.5 bg-emerald-800/60 rounded text-[10px] font-mono">F8</kbd>
-            </button>
           </div>
         </div>
+
       </div>
 
       {/* MODALS */}
@@ -619,6 +1064,6 @@ export const POSTerminal: React.FC = () => {
         onClose={() => setIsAddCustomerOpen(false)}
         onCustomerCreated={newCustomer => setSelectedCustomer(newCustomer)}
       />
-    </div>
+    </NebulaPage>
   );
 };

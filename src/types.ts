@@ -79,6 +79,48 @@ export interface TransactionItem {
   warrantyInfo?: string;
 }
 
+export interface RevenueBreakdown {
+  productRevenue: number;
+  installationRevenue: number;
+  deliveryRevenue: number;
+  serviceRevenue: number;
+}
+
+export interface InstallationCharge {
+  enabled: boolean;
+  serviceType: string;
+  standardPrice: number;
+  overridePrice?: number;
+  overrideReason?: string;
+  assignedTeam?: string;
+  scheduledDate?: string;
+  siteAddress?: string;
+  notes?: string;
+}
+
+export interface DeliveryCharge {
+  enabled: boolean;
+  provider: string;
+  method: string;
+  standardPrice: number;
+  overridePrice?: number;
+  overrideReason?: string;
+  deliveryAddress?: string;
+  expectedDate?: string;
+  trackingCode?: string;
+  notes?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  user: string;
+  action: string;
+  originalValue: any;
+  newValue: any;
+  reason: string;
+}
+
 export interface Transaction {
   id: string;
   invoiceNo: string;
@@ -100,6 +142,10 @@ export interface Transaction {
   amountPaid: number;
   changeReturn?: number;
   items: TransactionItem[];
+  revenueBreakdown?: RevenueBreakdown;
+  installation?: InstallationCharge;
+  delivery?: DeliveryCharge;
+  auditLogs?: AuditLog[];
   notes?: string;
   staffName: string;
 }
@@ -642,6 +688,7 @@ export type ActiveTab =
   | 'pos'
   | 'dashboard'
   | 'services'
+  | 'service'
   | 'users'
   | 'products'
   | 'repairs'
@@ -662,5 +709,25 @@ export type ActiveTab =
   | 'backup'
   | 'modules'
   | 'import'
-  | 'settings';
+  | 'settings'
+  | 'data_management'
+  | 'backup_restore'
+  | 'data_migration'
+  | 'import_export'
+  | 'database_maintenance'
+  | 'data_cleanup'
+  | 'archive_center'
+  | 'audit_recovery'
+  | 'system_admin'
+  | 'database_utilities'
+  | 'system_maintenance'
+  | 'sys_audit_logs'
+  | 'system_health'
+  | 'scheduler_jobs'
+  | 'inventory'
+  | 'procurement'
+  | 'crm'
+  | 'finance'
+  | 'marketplace'
+  | 'integrations';
 

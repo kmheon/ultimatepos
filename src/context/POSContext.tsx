@@ -18,7 +18,11 @@ import {
   SaleReturn,
   ServiceTechnician,
   ServiceScheduleSlot,
-  UltimatePOSImportSummary
+  UltimatePOSImportSummary,
+  InstallationCharge,
+  DeliveryCharge,
+  RevenueBreakdown,
+  AuditLog
 } from '../types';
 import { 
   initialProducts, 
@@ -66,6 +70,14 @@ interface POSContextType {
   cartTaxAmount: number;
   cartDiscountAmount: number;
   cartTotal: number;
+  productRevenue: number;
+  installationRevenue: number;
+  deliveryRevenue: number;
+  serviceRevenue: number;
+  installationCharge: InstallationCharge;
+  setInstallationCharge: React.Dispatch<React.SetStateAction<InstallationCharge>>;
+  deliveryCharge: DeliveryCharge;
+  setDeliveryCharge: React.Dispatch<React.SetStateAction<DeliveryCharge>>;
   
   // Service Management & Technicians
   technicians: ServiceTechnician[];
@@ -273,6 +285,24 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedCustomer, setSelectedCustomer] = useState<Contact>(initialContacts[0]);
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
 
+  const [installationCharge, setInstallationCharge] = useState<InstallationCharge>({
+    enabled: false,
+    serviceType: 'Standard Installation',
+    standardPrice: 700,
+    assignedTeam: 'Field Squad Alpha',
+    scheduledDate: new Date().toISOString().split('T')[0],
+    siteAddress: 'House 42, Road 11, Banani, Dhaka',
+  });
+
+  const [deliveryCharge, setDeliveryCharge] = useState<DeliveryCharge>({
+    enabled: false,
+    provider: 'Steadfast',
+    method: 'Inside Dhaka',
+    standardPrice: 80,
+    expectedDate: new Date().toISOString().split('T')[0],
+    deliveryAddress: 'House 42, Road 11, Banani, Dhaka',
+  });
+
   // Sync to LocalStorage
   useEffect(() => {
     localStorage.setItem('upos_products_v2', JSON.stringify(products));
@@ -330,14 +360,19 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('upos_schedule_v2', JSON.stringify(scheduleSlots));
   }, [scheduleSlots]);
 
-  // Cart Calculations
-  const cartSubtotal = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  // Cart Calculations & Independent Revenue Streams
+  const productRevenue = cart.reduce((sum, item) => sum + (item.quantity * item.unitPrice) - item.discount, 0);
+  const installationRevenue = installationCharge.enabled ? (installationCharge.overridePrice ?? installationCharge.standardPrice) : 0;
+  const deliveryRevenue = deliveryCharge.enabled ? (deliveryCharge.overridePrice ?? deliveryCharge.standardPrice) : 0;
+  const serviceRevenue = 0;
+
+  const cartSubtotal = productRevenue;
   const cartDiscountAmount = cart.reduce((sum, item) => sum + item.discount, 0);
   const cartTaxAmount = cart.reduce((sum, item) => {
     const itemSub = (item.quantity * item.unitPrice) - item.discount;
     return sum + (itemSub * (item.taxRate / 100));
   }, 0);
-  const cartTotal = Math.max(0, cartSubtotal - cartDiscountAmount + cartTaxAmount);
+  const cartTotal = Math.max(0, productRevenue - cartDiscountAmount + cartTaxAmount + installationRevenue + deliveryRevenue);
 
   // Cart Actions
   const addToCart = (product: Product, quantity = 1, selectedSerial?: string) => {
@@ -507,6 +542,37 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
+    const auditLogs: AuditLog[] = [];
+    if (installationCharge.enabled && installationCharge.overridePrice !== undefined && installationCharge.overridePrice !== installationCharge.standardPrice) {
+      auditLogs.push({
+        id: `audit-${Date.now()}-inst`,
+        timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        user: 'Admin / Current Cashier',
+        action: 'Installation Price Override',
+        originalValue: installationCharge.standardPrice,
+        newValue: installationCharge.overridePrice,
+        reason: installationCharge.overrideReason || 'Special Discount / VIP',
+      });
+    }
+    if (deliveryCharge.enabled && deliveryCharge.overridePrice !== undefined && deliveryCharge.overridePrice !== deliveryCharge.standardPrice) {
+      auditLogs.push({
+        id: `audit-${Date.now()}-del`,
+        timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        user: 'Admin / Current Cashier',
+        action: 'Delivery Price Override',
+        originalValue: deliveryCharge.standardPrice,
+        newValue: deliveryCharge.overridePrice,
+        reason: deliveryCharge.overrideReason || 'Special Discount / VIP',
+      });
+    }
+
+    const revenueBreakdown: RevenueBreakdown = {
+      productRevenue: Math.max(0, productRevenue - cartDiscountAmount),
+      installationRevenue,
+      deliveryRevenue,
+      serviceRevenue,
+    };
+
     const newTransaction: Transaction = {
       id: `tx-${Date.now()}`,
       invoiceNo: invoiceNumber,
@@ -521,16 +587,53 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       paymentStatus,
       paymentMethod: paymentData.method,
       transactionDate: new Date().toISOString().replace('T', ' ').slice(0, 16),
-      totalBeforeTax: cartSubtotal,
+      totalBeforeTax: productRevenue + installationRevenue + deliveryRevenue,
       taxAmount: cartTaxAmount,
       discountAmount: cartDiscountAmount + extraDiscount,
       finalTotal: calculatedFinalTotal,
       amountPaid: Math.min(paymentData.amountPaid, calculatedFinalTotal),
       changeReturn,
       items: transactionItems,
+      revenueBreakdown,
+      installation: installationCharge.enabled ? { ...installationCharge } : undefined,
+      delivery: deliveryCharge.enabled ? { ...deliveryCharge } : undefined,
+      auditLogs: auditLogs.length > 0 ? auditLogs : undefined,
       notes: paymentData.notes,
       staffName: 'Admin / Current Cashier',
     };
+
+    if (installationCharge.enabled) {
+      const newJob: RepairJobSheet = {
+        id: `rep-${Date.now()}`,
+        jobSheetNumber: `JOB-${new Date().getFullYear()}-${String(repairJobSheets.length + 95).padStart(3, '0')}`,
+        customerId: selectedCustomer.id,
+        customerName: selectedCustomer.name,
+        customerMobile: selectedCustomer.mobile,
+        deviceBrand: cart[0]?.product.brandName || 'CamneX Security / IT',
+        deviceModel: cart[0]?.product.name || installationCharge.serviceType,
+        serialNumberOrIMEI: cart[0]?.selectedSerial || invoiceNumber,
+        accessoriesHandedOver: ['Power Supply', 'Mounting Bracket', 'Cabling Kit'],
+        defectsDescription: `Installation & Site Deployment (${installationCharge.serviceType}) for Invoice ${invoiceNumber}. Site: ${installationCharge.siteAddress || 'N/A'}`,
+        physicalCondition: 'New Sale Deployment',
+        technicianAssigned: installationCharge.assignedTeam || 'Field Squad Alpha',
+        serviceType: installationCharge.serviceType,
+        assetCategory: 'CCTV & IT Infrastructure',
+        estimatedCost: installationRevenue,
+        partsCost: 0,
+        laborCost: installationRevenue,
+        finalTotal: installationRevenue,
+        amountPaid: isFullyPaid ? installationRevenue : 0,
+        status: 'pending',
+        stageId: 'new_requests',
+        priority: 'normal',
+        createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        estimatedDeliveryDate: installationCharge.scheduledDate || new Date().toISOString().split('T')[0],
+        warrantyTerms: '1 Year Installation & Service Warranty',
+        locationId: currentLocation.id,
+        locationName: currentLocation.name,
+      };
+      setRepairJobSheets(prev => [newJob, ...prev]);
+    }
 
     // Deduct stock and remove used serial numbers
     setProducts(prevProducts =>
@@ -1356,6 +1459,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cartTaxAmount,
         cartDiscountAmount,
         cartTotal,
+        productRevenue,
+        installationRevenue,
+        deliveryRevenue,
+        serviceRevenue,
+        installationCharge,
+        setInstallationCharge,
+        deliveryCharge,
+        setDeliveryCharge,
         technicians,
         addTechnician,
         updateTechnician,

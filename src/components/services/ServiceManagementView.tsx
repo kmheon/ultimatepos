@@ -73,9 +73,15 @@ import {
   getDefaultReservedPartsForCategory
 } from '../../services/serviceOperations.service';
 
-type ServiceSubTab = 'dashboard' | 'requests' | 'technicians' | 'schedule' | 'reports';
+import { updateBrowserURL } from '../../utils/navigationRouter';
 
-export const ServiceManagementView: React.FC = () => {
+export type ServiceSubTab = 'dashboard' | 'requests' | 'work_orders' | 'technicians' | 'schedule' | 'reports';
+
+interface ServiceManagementViewProps {
+  initialSubTab?: string;
+}
+
+export const ServiceManagementView: React.FC<ServiceManagementViewProps> = ({ initialSubTab = 'dashboard' }) => {
   const { 
     repairJobSheets, 
     addRepairJobSheet, 
@@ -96,7 +102,22 @@ export const ServiceManagementView: React.FC = () => {
     setActiveTab
   } = usePOS();
 
-  const [activeSubTab, setActiveSubTab] = useState<ServiceSubTab>('dashboard');
+  const normalizedSubTab = React.useMemo<ServiceSubTab>(() => {
+    if (!initialSubTab) return 'dashboard';
+    const clean = initialSubTab.toLowerCase().replace(/_/g, '-');
+    if (['work-orders', 'work_orders', 'orders', 'jobs'].includes(clean)) return 'work_orders';
+    if (['requests', 'tickets'].includes(clean)) return 'requests';
+    if (['technicians', 'techs', 'team'].includes(clean)) return 'technicians';
+    if (['schedule', 'calendar', 'dispatch'].includes(clean)) return 'schedule';
+    if (['reports', 'analytics'].includes(clean)) return 'reports';
+    return 'dashboard';
+  }, [initialSubTab]);
+
+  const [activeSubTab, setActiveSubTab] = useState<ServiceSubTab>(normalizedSubTab);
+
+  React.useEffect(() => {
+    setActiveSubTab(normalizedSubTab);
+  }, [normalizedSubTab]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
@@ -466,7 +487,7 @@ export const ServiceManagementView: React.FC = () => {
   // KPI Quick Counters
   const pendingJobs = repairJobSheets.filter(j => j.status === 'pending').length;
 
-  // Filtered Requests
+  // Filtered Requests (Inbound Intake / Service Requests)
   const filteredRequests = repairJobSheets.filter(job => {
     const matchesSearch = 
       job.jobSheetNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -480,7 +501,28 @@ export const ServiceManagementView: React.FC = () => {
     const matchesPriority = priorityFilter === 'all' || job.priority === priorityFilter;
     const matchesTechnician = technicianFilter === 'all' || job.technicianAssigned === technicianFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesTechnician;
+    // For requests tab, default to pending/inbound intake requests unless status filter is changed
+    const isPendingOrIntake = statusFilter !== 'all' ? matchesStatus : (job.status === 'pending' || searchQuery !== '');
+    return matchesSearch && isPendingOrIntake && matchesPriority && matchesTechnician;
+  });
+
+  // Filtered Work Orders (Active Repair Execution & Job Sheets)
+  const filteredWorkOrders = repairJobSheets.filter(job => {
+    const matchesSearch = 
+      job.jobSheetNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.deviceBrand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.deviceModel.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.serialNumberOrIMEI.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.defectsDescription.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || job.status === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || job.priority === priorityFilter;
+    const matchesTechnician = technicianFilter === 'all' || job.technicianAssigned === technicianFilter;
+
+    // For work orders tab, show active execution jobs (diagnosing, awaiting_parts, repaired, delivered)
+    const isActiveExecution = statusFilter !== 'all' ? matchesStatus : (job.status !== 'pending' || searchQuery !== '');
+    return matchesSearch && isActiveExecution && matchesPriority && matchesTechnician;
   });
 
   const handleCreateRequest = (e: React.FormEvent) => {
@@ -750,41 +792,6 @@ export const ServiceManagementView: React.FC = () => {
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs */}
-      <div className="bg-white border-b border-slate-200 px-6">
-        <div className="flex space-x-1 overflow-x-auto no-scrollbar">
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: undefined },
-            { id: 'requests', label: 'Requests', icon: ClipboardList, badge: pendingJobs > 0 ? pendingJobs : undefined, badgeColor: 'bg-amber-500 text-white' },
-            { id: 'technicians', label: 'Technicians', icon: Users, badge: technicians.length, badgeColor: 'bg-slate-100 text-slate-700' },
-            { id: 'schedule', label: 'Schedule', icon: Calendar, badge: scheduleSlots.length, badgeColor: 'bg-blue-100 text-blue-700' },
-            { id: 'reports', label: 'Analytics', icon: BarChart3, badge: undefined },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeSubTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSubTab(tab.id as ServiceSubTab)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  isActive
-                    ? 'border-blue-600 text-blue-600 font-semibold'
-                    : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
-                {tab.label}
-                {tab.badge !== undefined && (
-                  <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold leading-none ${tab.badgeColor || 'bg-slate-200 text-slate-800'}`}>
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Main View Container */}
       <div className="flex-1 p-6 overflow-y-auto">
         {/* ========================================================================= */}
@@ -811,17 +818,31 @@ export const ServiceManagementView: React.FC = () => {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 2: REQUESTS & WORK ORDERS                                             */}
+        {/* TAB 2: INBOUND SERVICE REQUESTS & INTAKE QUEUE                            */}
         {/* ========================================================================= */}
         {activeSubTab === 'requests' && (
           <div className="space-y-4">
+            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Inbound Service Requests & Intake Triage</h2>
+                <p className="text-xs text-slate-500">Manage incoming customer service inquiries, device drop-off intake, initial triage, and quotation approvals.</p>
+              </div>
+              <button
+                onClick={() => setIsAddRequestOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Service Request
+              </button>
+            </div>
+
             {/* Filters bar */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
               <div className="relative flex-1 max-w-md">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search by Work Order #, Customer, Asset Model, Serial or Scope..."
+                  placeholder="Search requests by #, Customer, Device, or Issue..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -834,12 +855,9 @@ export const ServiceManagementView: React.FC = () => {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 >
-                  <option value="all">All Statuses ({repairJobSheets.length})</option>
-                  <option value="pending">New Requests</option>
-                  <option value="diagnosing">Assessment / In Progress</option>
-                  <option value="awaiting_parts">Waiting on Parts</option>
-                  <option value="repaired">Quality Review</option>
-                  <option value="delivered">Closed / Handed Over</option>
+                  <option value="all">All Request Statuses</option>
+                  <option value="pending">New Pending Requests</option>
+                  <option value="diagnosing">Under Assessment</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
 
@@ -854,25 +872,6 @@ export const ServiceManagementView: React.FC = () => {
                   <option value="normal">Normal</option>
                   <option value="low">Low</option>
                 </select>
-
-                <select
-                  value={technicianFilter}
-                  onChange={(e) => setTechnicianFilter(e.target.value)}
-                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                >
-                  <option value="all">All Service Resources</option>
-                  {technicians.map(t => (
-                    <option key={t.id} value={t.name}>{t.name}</option>
-                  ))}
-                </select>
-
-                <button
-                  onClick={() => setIsAddRequestOpen(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-all"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  New Service Request
-                </button>
               </div>
             </div>
 
@@ -882,23 +881,22 @@ export const ServiceManagementView: React.FC = () => {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
                     <tr>
-                      <th className="py-3.5 px-4">Work Order #</th>
+                      <th className="py-3.5 px-4">Request #</th>
                       <th className="py-3.5 px-4">Customer & Contact</th>
-                      <th className="py-3.5 px-4">Customer Asset</th>
-                      <th className="py-3.5 px-4">Scope / Issue</th>
-                      <th className="py-3.5 px-4">Assigned Resource</th>
+                      <th className="py-3.5 px-4">Equipment / Asset</th>
+                      <th className="py-3.5 px-4">Reported Issue / Scope</th>
                       <th className="py-3.5 px-4">Priority</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-4 text-right">Est. Total</th>
+                      <th className="py-3.5 px-4">Intake Status</th>
+                      <th className="py-3.5 px-4 text-right">Est. Quote</th>
                       <th className="py-3.5 px-4 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredRequests.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="py-12 text-center text-slate-400">
-                          <Wrench className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                          No service requests found matching your filters.
+                        <td colSpan={8} className="py-12 text-center text-slate-400">
+                          <ClipboardList className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                          No inbound service requests found.
                         </td>
                       </tr>
                     ) : (
@@ -917,16 +915,165 @@ export const ServiceManagementView: React.FC = () => {
                           </td>
                           <td className="py-3.5 px-4">
                             <div className="font-medium text-slate-900">{job.deviceBrand} {job.deviceModel}</div>
-                            <div className="text-[11px] text-slate-500">Asset ID: {job.serialNumberOrIMEI || 'N/A'}</div>
+                            <div className="text-[11px] text-slate-500">Serial: {job.serialNumberOrIMEI || 'N/A'}</div>
                           </td>
                           <td className="py-3.5 px-4 max-w-xs">
                             <p className="text-slate-700 truncate" title={job.defectsDescription}>
                               {job.defectsDescription}
                             </p>
                           </td>
+                          <td className="py-3.5 px-4">{getPriorityBadge(job.priority)}</td>
+                          <td className="py-3.5 px-4">
+                            <span className={`px-2 py-1 rounded-lg text-[11px] font-semibold ${
+                              job.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {job.status === 'pending' ? 'New Inquiry' : job.status}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="font-bold text-slate-900">{settings.currencySymbol}{job.finalTotal.toFixed(2)}</div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => setSelectedJobForDetails(job)}
+                                title="View Details"
+                                className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  updateRepairStatus(job.id, 'diagnosing');
+                                  setActiveSubTab('work_orders');
+                                }}
+                                title="Convert to Active Work Order"
+                                className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-semibold hover:bg-blue-700"
+                              >
+                                Convert to WO
+                              </button>
+                              <button
+                                onClick={() => deleteRepairJobSheet(job.id)}
+                                title="Delete"
+                                className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 2B: ACTIVE WORK ORDERS & REPAIR EXECUTION                             */}
+        {/* ========================================================================= */}
+        {activeSubTab === 'work_orders' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Active Work Orders & Repair Execution</h2>
+                <p className="text-xs text-slate-500">Track field service execution, technician dispatch, parts consumption, diagnostics, and quality review checklists.</p>
+              </div>
+              <button
+                onClick={() => setIsAddRequestOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Work Order
+              </button>
+            </div>
+
+            {/* Filters bar */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search work orders by #, Customer, Asset, or Tech..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                >
+                  <option value="all">All Active Work Orders</option>
+                  <option value="diagnosing">Assessment / In Progress</option>
+                  <option value="awaiting_parts">Waiting on Parts</option>
+                  <option value="repaired">Quality Review</option>
+                  <option value="delivered">Closed / Handed Over</option>
+                </select>
+
+                <select
+                  value={technicianFilter}
+                  onChange={(e) => setTechnicianFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                >
+                  <option value="all">All Assigned Engineers</option>
+                  {technicians.map(t => (
+                    <option key={t.id} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Work Orders Table */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3.5 px-4">Work Order #</th>
+                      <th className="py-3.5 px-4">Customer & Contact</th>
+                      <th className="py-3.5 px-4">Equipment / Asset</th>
+                      <th className="py-3.5 px-4">Assigned Engineer</th>
+                      <th className="py-3.5 px-4">Priority</th>
+                      <th className="py-3.5 px-4">Execution Status</th>
+                      <th className="py-3.5 px-4 text-right">Total / Paid</th>
+                      <th className="py-3.5 px-4 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredWorkOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-slate-400">
+                          <Wrench className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                          No active work orders found.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredWorkOrders.map(job => (
+                        <tr key={job.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3.5 px-4 font-bold text-blue-600">
+                            {job.jobSheetNumber}
+                            <div className="text-[10px] text-slate-400 font-normal">Due: {job.estimatedDeliveryDate}</div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="font-semibold text-slate-900">{job.customerName}</div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-slate-400" />
+                              {job.customerMobile}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="font-medium text-slate-900">{job.deviceBrand} {job.deviceModel}</div>
+                            <div className="text-[11px] text-slate-500">Asset: {job.serialNumberOrIMEI || 'N/A'}</div>
+                          </td>
                           <td className="py-3.5 px-4">
                             <div className="text-slate-800 font-medium">{job.technicianAssigned.split(',')[0]}</div>
-                            <div className="text-[10px] text-slate-400">Due: {job.estimatedDeliveryDate}</div>
+                            <div className="text-[10px] text-slate-400">Field Squad Assigned</div>
                           </td>
                           <td className="py-3.5 px-4">{getPriorityBadge(job.priority)}</td>
                           <td className="py-3.5 px-4">
@@ -935,7 +1082,6 @@ export const ServiceManagementView: React.FC = () => {
                               onChange={(e) => updateRepairStatus(job.id, e.target.value as RepairJobSheet['status'])}
                               className="text-xs bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 font-medium focus:ring-1 focus:ring-blue-500"
                             >
-                              <option value="pending">New Request</option>
                               <option value="diagnosing">Assessment / In Progress</option>
                               <option value="awaiting_parts">Waiting on Parts</option>
                               <option value="repaired">Quality Review</option>
@@ -958,7 +1104,7 @@ export const ServiceManagementView: React.FC = () => {
                               </button>
                               <button
                                 onClick={() => setSelectedJobForPrint(job)}
-                                title="Print Service Sheet / Card"
+                                title="Print Work Order / Job Sheet"
                                 className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg"
                               >
                                 <Printer className="w-4 h-4" />

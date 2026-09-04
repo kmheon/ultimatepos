@@ -1,351 +1,291 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Package, 
-  Receipt, 
-  Truck, 
-  Users, 
-  CreditCard, 
-  BarChart3, 
-  Settings,
-  ChevronDown,
-  ChevronRight,
+  LayoutDashboard,
+  ShoppingCart,
   Wrench,
-  FileSpreadsheet,
-  ArrowLeftRight,
-  Barcode,
-  RotateCcw,
-  UserCheck,
-  ShieldCheck,
-  Percent,
-  SlidersHorizontal,
+  Receipt,
+  Truck,
+  Package,
+  Users,
   Landmark,
-  Scale,
-  TrendingUp,
-  FileText,
   Users2,
-  CheckSquare,
-  ShoppingBag,
-  Database,
+  BarChart3,
+  UserCheck,
   Puzzle,
-  Search,
-  Tag,
-  Boxes,
   Layers,
-  Building2,
-  CalendarCheck,
-  Clock,
-  Banknote,
-  Send,
-  Plus
+  Settings,
+  Shield,
+  Search,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 import { usePOS } from '../../context/POSContext';
-import { ActiveTab } from '../../types';
+import { updateBrowserURL } from '../../utils/navigationRouter';
 
 interface SidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
 
-interface SubMenuItem {
-  name: string;
-  tab: ActiveTab;
-  badge?: string | number;
-  badgeColor?: string;
-  action?: string;
+export interface ModuleSubPage {
+  id: string;
+  label: string;
 }
 
-interface MenuItem {
+export interface ERPModuleItem {
   id: string;
   title: string;
-  icon: React.FC<{ className?: string }>;
-  tab?: ActiveTab;
+  tab: string;
+  icon: React.ComponentType<{ className?: string }>;
   badge?: string | number;
   badgeColor?: string;
-  subItems?: SubMenuItem[];
+  subPages?: ModuleSubPage[];
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse }) => {
-  const { activeTab, setActiveTab, products, cart, repairJobSheets, quotations } = usePOS();
-  
-  const [searchFilter, setSearchFilter] = useState('');
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    sell: true,
-    products: false,
-    repairs: false,
-    purchases: false,
-    contacts: false,
-    accounts: false,
-    reports: false,
-    hrm: false,
-    settings: false,
-  });
+export const resolveParentModule = (tab: string): string => {
+  if (!tab) return 'dashboard';
+  const clean = tab.toLowerCase().replace(/_/g, '-');
 
-  useEffect(() => {
-    if (activeTab === 'import' || activeTab === 'settings') {
-      setOpenSections(prev => ({ ...prev, settings: true }));
-    }
-  }, [activeTab]);
+  if (['dashboard', 'overview'].includes(clean)) return 'dashboard';
+  if (['pos', 'terminal'].includes(clean)) return 'pos';
+  if (['services', 'service', 'repairs', 'repair'].includes(clean)) return 'service';
+  if (['sales', 'sale', 'orders', 'invoices', 'quotations', 'returns'].includes(clean)) return 'sales';
+  if (['purchases', 'purchase', 'procurement', 'requisitions', 'suppliers'].includes(clean)) return 'purchases';
+  if (['inventory', 'products', 'product', 'categories', 'brands', 'stock', 'transfers', 'adjustments', 'labels'].includes(clean)) return 'inventory';
+  if (['crm', 'contacts', 'contact', 'customers', 'customer', 'organizations', 'leads', 'projects'].includes(clean)) return 'crm';
+  if (['finance', 'accounts', 'account', 'expenses', 'expense', 'banking', 'registers', 'accounting'].includes(clean)) return 'finance';
+  if (['hrm', 'hr', 'attendance', 'leaves', 'payroll', 'departments', 'essentials'].includes(clean)) return 'hrm';
+  if (['reports', 'report', 'analytics', 'pnl'].includes(clean)) return 'reports';
+  if (['users', 'user', 'roles'].includes(clean)) return 'users';
+  if (['marketplace', 'modules', 'module'].includes(clean)) return 'marketplace';
+  if (['integrations', 'integration', 'woocommerce'].includes(clean)) return 'integrations';
+  if (['settings', 'setting', 'configuration'].includes(clean)) return 'settings';
+  if ([
+    'system-admin', 'system_admin', 'system', 'admin',
+    'data-migration', 'data_migration', 'backup-restore', 'backup_restore',
+    'import-export', 'import_export', 'database-utilities', 'database_utilities',
+    'system-maintenance', 'system_maintenance', 'sys-audit-logs', 'sys_audit_logs',
+    'system-health', 'system_health', 'scheduler-jobs', 'scheduler_jobs',
+    'import', 'backup', 'data_management', 'database_maintenance',
+    'data_cleanup', 'archive_center', 'audit_recovery'
+  ].includes(clean)) {
+    return 'system_admin';
+  }
+
+  return tab;
+};
+
+export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
+  const { activeTab, setActiveTab, products, cart, repairJobSheets } = usePOS();
+  const [searchFilter, setSearchFilter] = useState('');
+  const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
 
   const lowStockCount = products.filter(p => p.currentStock <= p.alertQuantity).length;
   const activeRepairsCount = repairJobSheets.filter(r => r.status === 'pending' || r.status === 'diagnosing' || r.status === 'awaiting_parts').length;
-  const activeQuotesCount = quotations.filter(q => q.status === 'sent' || q.status === 'draft').length;
 
-  const toggleSection = (sectionId: string) => {
-    setOpenSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId]
-    }));
-  };
+  const currentActiveModule = resolveParentModule(activeTab);
 
-  const menuStructure: MenuItem[] = [
+  const modulesList: ERPModuleItem[] = useMemo(() => [
     {
-      id: 'home',
-      title: 'Home / Dashboard',
-      icon: LayoutDashboard,
+      id: 'dashboard',
+      title: 'Dashboard',
       tab: 'dashboard',
+      icon: LayoutDashboard,
     },
     {
-      id: 'pos_direct',
-      title: 'POS Terminal',
-      icon: ShoppingCart,
+      id: 'pos',
+      title: 'Point of Sale (POS)',
       tab: 'pos',
-      badge: cart.length > 0 ? `${cart.length} Cart` : 'Instant',
-      badgeColor: cart.length > 0 ? 'bg-emerald-500 text-white font-bold' : 'bg-blue-100 text-blue-700',
+      icon: ShoppingCart,
+      badge: cart.length > 0 ? cart.length : undefined,
+      badgeColor: 'bg-emerald-500 text-white',
     },
     {
-      id: 'service_mgmt',
+      id: 'service',
       title: 'Service Management',
+      tab: 'service',
       icon: Wrench,
-      tab: 'services',
-      badge: activeRepairsCount > 0 ? `${activeRepairsCount} Active` : 'New',
-      badgeColor: activeRepairsCount > 0 ? 'bg-amber-100 text-amber-800 font-bold border border-amber-300' : 'bg-blue-100 text-blue-700 font-semibold',
-      subItems: [
-        { name: 'Dashboard', tab: 'services' },
-        { name: 'Requests', tab: 'services', badge: activeRepairsCount > 0 ? activeRepairsCount : undefined, badgeColor: 'bg-amber-500 text-white' },
-        { name: 'Technicians', tab: 'services' },
-        { name: 'Schedule', tab: 'services' },
-        { name: 'Reports', tab: 'services' },
+      badge: activeRepairsCount > 0 ? activeRepairsCount : undefined,
+      badgeColor: 'bg-amber-500 text-white',
+      subPages: [
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'requests', label: 'Requests' },
+        { id: 'work_orders', label: 'Work Orders' },
+        { id: 'technicians', label: 'Technicians' },
+        { id: 'schedule', label: 'Schedule' },
+        { id: 'reports', label: 'Analytics' },
       ]
     },
     {
-      id: 'sell',
-      title: 'Sell & Invoicing',
-      icon: Receipt,
+      id: 'sales',
+      title: 'Sales',
       tab: 'sales',
-      subItems: [
-        { name: 'All sales', tab: 'sales' },
-        { name: 'Add Sale (POS)', tab: 'pos' },
-        { name: 'List POS Receipts', tab: 'sales' },
-        { name: 'Sales Order', tab: 'sales' },
-        { name: 'Add Quotation', tab: 'quotations' },
-        { name: 'List quotations', tab: 'quotations', badge: activeQuotesCount > 0 ? activeQuotesCount : undefined, badgeColor: 'bg-sky-100 text-sky-800' },
-        { name: 'List Sell Return', tab: 'returns' },
-        { name: 'Shipments', tab: 'sales' },
-        { name: 'Discounts', tab: 'sales' },
-        { name: 'Import Sales', tab: 'import' },
-      ]
-    },
-    {
-      id: 'products',
-      title: 'Products & Catalog',
-      icon: Package,
-      tab: 'products',
-      badge: lowStockCount > 0 ? `${lowStockCount} Low` : undefined,
-      badgeColor: 'bg-amber-100 text-amber-800 border border-amber-300',
-      subItems: [
-        { name: 'List Products', tab: 'products' },
-        { name: 'Add Product', tab: 'products' },
-        { name: 'Update Price', tab: 'products' },
-        { name: 'Print Labels', tab: 'labels' },
-        { name: 'Variations', tab: 'products' },
-        { name: 'Import Products', tab: 'import' },
-        { name: 'Import Opening Stock', tab: 'import' },
-        { name: 'Selling Price Group', tab: 'products' },
-        { name: 'Units', tab: 'products' },
-        { name: 'Categories', tab: 'products' },
-        { name: 'Brands', tab: 'products' },
-        { name: 'Warranties', tab: 'products' },
+      icon: Receipt,
+      subPages: [
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'pos', label: 'POS Terminal' },
+        { id: 'orders', label: 'Orders' },
+        { id: 'quotations', label: 'Quotations' },
+        { id: 'invoices', label: 'Invoices' },
+        { id: 'returns', label: 'Returns' },
+        { id: 'reports', label: 'Reports' },
       ]
     },
     {
       id: 'purchases',
-      title: 'Purchases & Supply',
-      icon: Truck,
+      title: 'Purchases',
       tab: 'purchases',
-      subItems: [
-        { name: 'Purchase Requisition', tab: 'purchases' },
-        { name: 'Purchase Order', tab: 'purchases' },
-        { name: 'List Purchases', tab: 'purchases' },
-        { name: 'Add Purchase', tab: 'purchases' },
-        { name: 'List Purchase Return', tab: 'purchases' },
+      icon: Truck,
+      subPages: [
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'orders', label: 'Purchase Orders' },
+        { id: 'requisitions', label: 'Requisitions' },
+        { id: 'suppliers', label: 'Suppliers' },
+        { id: 'expenses', label: 'Expenses' },
+        { id: 'reports', label: 'Reports' },
       ]
     },
     {
-      id: 'contacts',
-      title: 'Contacts & CRM',
+      id: 'inventory',
+      title: 'Inventory',
+      tab: 'inventory',
+      icon: Package,
+      badge: lowStockCount > 0 ? `${lowStockCount} Low` : undefined,
+      badgeColor: 'bg-rose-500 text-white',
+      subPages: [
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'products', label: 'Products' },
+        { id: 'categories', label: 'Categories' },
+        { id: 'brands', label: 'Brands' },
+        { id: 'stock', label: 'Stock' },
+        { id: 'transfers', label: 'Transfers' },
+        { id: 'adjustments', label: 'Adjustments' },
+        { id: 'reports', label: 'Reports' },
+      ]
+    },
+    {
+      id: 'crm',
+      title: 'CRM',
+      tab: 'crm',
       icon: Users,
-      tab: 'contacts',
-      subItems: [
-        { name: 'Suppliers', tab: 'contacts' },
-        { name: 'Customers', tab: 'contacts' },
-        { name: 'Customer Groups', tab: 'contacts' },
-        { name: 'Import Contacts', tab: 'import' },
+      subPages: [
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'customers', label: 'Customers' },
+        { id: 'organizations', label: 'Organizations' },
+        { id: 'contacts', label: 'Contacts' },
+        { id: 'leads', label: 'Leads' },
+        { id: 'projects', label: 'Projects' },
+        { id: 'reports', label: 'Reports' },
       ]
     },
     {
-      id: 'stock_transfers',
-      title: 'Stock Transfers',
-      icon: ArrowLeftRight,
-      tab: 'transfers',
-      subItems: [
-        { name: 'List Stock Transfers', tab: 'transfers' },
-        { name: 'Add Stock Transfer', tab: 'transfers' },
-      ]
-    },
-    {
-      id: 'stock_adjustment',
-      title: 'Stock Adjustment',
-      icon: SlidersHorizontal,
-      tab: 'adjustments',
-      subItems: [
-        { name: 'List Stock Adjustments', tab: 'adjustments' },
-        { name: 'Add Stock Adjustment', tab: 'adjustments' },
-      ]
-    },
-    {
-      id: 'expenses',
-      title: 'Expenses',
-      icon: CreditCard,
-      tab: 'expenses',
-      subItems: [
-        { name: 'List Expenses', tab: 'expenses' },
-        { name: 'Add Expense', tab: 'expenses' },
-        { name: 'Expense Categories', tab: 'expenses' },
-      ]
-    },
-    {
-      id: 'accounts',
-      title: 'Payment Accounts',
+      id: 'finance',
+      title: 'Finance',
+      tab: 'finance',
       icon: Landmark,
-      tab: 'accounts',
-      subItems: [
-        { name: 'List Accounts', tab: 'accounts' },
-        { name: 'Balance Sheet', tab: 'accounts' },
-        { name: 'Trial Balance', tab: 'accounts' },
-        { name: 'Cash Flow', tab: 'accounts' },
-        { name: 'Payment Account Report', tab: 'accounts' },
-      ]
-    },
-    {
-      id: 'reports',
-      title: 'Reports & Analytics',
-      icon: BarChart3,
-      tab: 'reports',
-      subItems: [
-        { name: 'Profit / Loss Report', tab: 'reports' },
-        { name: 'Purchase & Sale', tab: 'reports' },
-        { name: 'Tax Report', tab: 'reports' },
-        { name: 'Supplier & Customer Report', tab: 'reports' },
-        { name: 'Customer Groups Report', tab: 'reports' },
-        { name: 'Stock Report', tab: 'reports' },
-        { name: 'Lot & Serial Report', tab: 'reports' },
-        { name: 'Stock Adjustment Report', tab: 'reports' },
-        { name: 'Trending Products', tab: 'reports' },
-        { name: 'Items Report', tab: 'reports' },
-        { name: 'Product Purchase Report', tab: 'reports' },
-        { name: 'Product Sell Report', tab: 'reports' },
-        { name: 'Purchase Payment Report', tab: 'reports' },
-        { name: 'Sell Payment Report', tab: 'reports' },
-        { name: 'Expense Report', tab: 'reports' },
-        { name: 'Register Report', tab: 'reports' },
-        { name: 'Sales Representative Report', tab: 'reports' },
-        { name: 'Activity Log', tab: 'reports' },
-      ]
-    },
-    {
-      id: 'user_mgmt',
-      title: 'User Management',
-      icon: UserCheck,
-      tab: 'users',
-      subItems: [
-        { name: 'Users', tab: 'users' },
-        { name: 'Roles & Permissions', tab: 'users' },
-        { name: 'Sales Commission Agents', tab: 'users' },
+      subPages: [
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'banking', label: 'Banking & Accounts' },
+        { id: 'expenses', label: 'Expenses' },
+        { id: 'registers', label: 'Cash Registers' },
+        { id: 'accounting', label: 'Accounting' },
+        { id: 'reports', label: 'Reports' },
       ]
     },
     {
       id: 'hrm',
-      title: 'HRM & Team',
-      icon: Users2,
+      title: 'HRM',
       tab: 'hrm',
-      subItems: [
-        { name: 'HRM Dashboard', tab: 'hrm' },
-        { name: 'Attendance Timeclock', tab: 'hrm' },
-        { name: 'Leaves & Time Off', tab: 'hrm' },
-        { name: 'Salary Payrolls', tab: 'hrm' },
-        { name: 'Departments', tab: 'hrm' },
+      icon: Users2,
+      subPages: [
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'employees', label: 'Employees' },
+        { id: 'attendance', label: 'Attendance' },
+        { id: 'leaves', label: 'Leaves' },
+        { id: 'payroll', label: 'Payroll' },
+        { id: 'departments', label: 'Departments' },
+        { id: 'reports', label: 'Reports' },
       ]
     },
     {
-      id: 'essentials',
-      title: 'Essentials & Notes',
-      icon: CheckSquare,
-      tab: 'essentials',
-      subItems: [
-        { name: 'To Do Tasks', tab: 'essentials' },
-        { name: 'Documents & Notes', tab: 'essentials' },
-        { name: 'Reminders & Alerts', tab: 'essentials' },
-      ]
+      id: 'reports',
+      title: 'Reports',
+      tab: 'reports',
+      icon: BarChart3,
     },
     {
-      id: 'woocommerce',
-      title: 'WooCommerce Sync',
-      icon: ShoppingBag,
-      tab: 'woocommerce',
-      subItems: [
-        { name: 'Storefront Settings', tab: 'woocommerce' },
-        { name: 'Push Products', tab: 'woocommerce' },
-        { name: 'Fetch Orders', tab: 'woocommerce' },
-      ]
+      id: 'users',
+      title: 'User Management',
+      tab: 'users',
+      icon: UserCheck,
     },
     {
-      id: 'modules',
-      title: 'Modules & Addons',
+      id: 'marketplace',
+      title: 'Marketplace',
+      tab: 'marketplace',
       icon: Puzzle,
-      tab: 'modules',
     },
     {
-      id: 'backup',
-      title: 'Administer Backup',
-      icon: Database,
-      tab: 'backup',
+      id: 'integrations',
+      title: 'Integrations',
+      tab: 'integrations',
+      icon: Layers,
     },
     {
       id: 'settings',
       title: 'Settings',
-      icon: Settings,
       tab: 'settings',
-      subItems: [
-        { name: 'Business Settings', tab: 'settings' },
-        { name: 'Business Locations', tab: 'settings' },
-        { name: 'Invoice Settings', tab: 'settings' },
-        { name: 'Barcode Settings', tab: 'settings' },
-        { name: 'Receipt Printers', tab: 'settings' },
-        { name: 'Tax Rates', tab: 'settings' },
-        { name: 'Types of service', tab: 'settings' },
-        { name: 'Data Migration', tab: 'import', badge: 'Enterprise', badgeColor: 'bg-blue-600 text-white font-bold' },
+      icon: Settings,
+      subPages: [
+        { id: 'business', label: 'Business' },
+        { id: 'locations', label: 'Locations' },
+        { id: 'financial', label: 'Financial' },
+        { id: 'taxes', label: 'Taxes' },
+        { id: 'pos', label: 'POS' },
+        { id: 'invoices', label: 'Invoices' },
+        { id: 'integrations', label: 'Integrations' },
+        { id: 'appearance', label: 'Appearance' },
       ]
     },
-  ];
+    {
+      id: 'system_admin',
+      title: 'System Administration',
+      tab: 'system_admin',
+      icon: Shield,
+      badge: 'Vault',
+      badgeColor: 'bg-slate-800 text-slate-200',
+      subPages: [
+        { id: 'overview', label: 'Overview' },
+        { id: 'data_migration', label: 'Data Migration' },
+        { id: 'backup_restore', label: 'Backup & Restore' },
+        { id: 'import_export', label: 'Import/Export' },
+        { id: 'database_utilities', label: 'Database Utilities' },
+        { id: 'system_maintenance', label: 'Maintenance' },
+        { id: 'sys_audit_logs', label: 'Audit Logs' },
+        { id: 'system_health', label: 'Health' },
+        { id: 'scheduler_jobs', label: 'Scheduler' },
+      ]
+    },
+  ], [cart.length, activeRepairsCount, lowStockCount]);
 
-  const filteredMenu = searchFilter.trim() === ''
-    ? menuStructure
-    : menuStructure.filter(m => 
-        m.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
-        m.subItems?.some(s => s.name.toLowerCase().includes(searchFilter.toLowerCase()))
-      );
+  const filteredModules = useMemo(() => {
+    if (!searchFilter.trim()) return modulesList;
+    const q = searchFilter.toLowerCase().trim();
+    return modulesList.filter(m => m.title.toLowerCase().includes(q));
+  }, [modulesList, searchFilter]);
+
+  const handleModuleClick = (mod: ERPModuleItem) => {
+    // Clicking parent module opens module dashboard
+    setActiveTab(mod.tab as any);
+    updateBrowserURL(mod.id, 'dashboard');
+    // Toggle expand state
+    setExpandedModules(prev => ({ ...prev, [mod.id]: !prev[mod.id] }));
+  };
+
+  const handleSubPageClick = (mod: ERPModuleItem, subId: string) => {
+    setActiveTab(mod.tab as any);
+    updateBrowserURL(mod.id, subId);
+  };
 
   return (
     <aside
@@ -360,13 +300,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse 
             <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <input
               type="text"
-              placeholder="Search 92+ menu items..."
+              placeholder="Search ERP modules..."
               value={searchFilter}
               onChange={e => setSearchFilter(e.target.value)}
               className="bg-transparent border-none focus:outline-none w-full text-xs"
             />
             {searchFilter && (
-              <button onClick={() => setSearchFilter('')} className="text-slate-400 hover:text-slate-700 text-[10px] font-bold">
+              <button 
+                type="button"
+                onClick={() => setSearchFilter('')} 
+                className="text-slate-400 hover:text-slate-700 text-[10px] font-bold"
+              >
                 ✕
               </button>
             )}
@@ -374,28 +318,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse 
         </div>
       )}
 
-      {/* Nav List */}
+      {/* Nav List with modules and sub-pages */}
       <div className="p-2.5 flex flex-col gap-1 flex-1 overflow-y-auto">
-        {filteredMenu.map(item => {
+        {filteredModules.map(item => {
           const Icon = item.icon;
-          const hasSubItems = item.subItems && item.subItems.length > 0;
-          const isSectionOpen = openSections[item.id] || searchFilter.length > 0;
-          const isItemActive = activeTab === item.tab || item.subItems?.some(s => s.tab === activeTab);
+          const isItemActive = currentActiveModule === item.id;
+          const isExpanded = isItemActive || expandedModules[item.id];
+          const hasSubPages = item.subPages && item.subPages.length > 0;
 
           return (
-            <div key={item.id} className="space-y-0.5">
+            <div key={item.id} className="flex flex-col">
               <button
-                onClick={() => {
-                  if (hasSubItems) {
-                    toggleSection(item.id);
-                  }
-                  if (item.tab) {
-                    setActiveTab(item.tab);
-                  }
-                }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left group ${
+                type="button"
+                onClick={() => handleModuleClick(item)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer group ${
                   isItemActive
-                    ? 'bg-blue-50 text-blue-800'
+                    ? 'bg-blue-50 text-blue-800 font-bold'
                     : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                 } ${isCollapsed ? 'justify-center' : 'justify-between'}`}
                 title={isCollapsed ? item.title : undefined}
@@ -414,40 +352,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse 
                 </div>
 
                 {!isCollapsed && (
-                  <div className="flex items-center gap-1.5">
-                    {item.badge && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {item.badge !== undefined && (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badgeColor || 'bg-slate-100 text-slate-700'}`}>
                         {item.badge}
                       </span>
                     )}
-                    {hasSubItems && (
-                      <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isSectionOpen ? 'rotate-180 text-blue-600' : ''}`} />
+                    {hasSubPages && (
+                      isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                     )}
                   </div>
                 )}
               </button>
 
-              {/* Submenu Dropdown */}
-              {!isCollapsed && hasSubItems && isSectionOpen && (
-                <div className="ml-7 pl-3 border-l-2 border-slate-200 space-y-0.5 py-1">
-                  {item.subItems?.map((sub, sIdx) => {
-                    const isSubActive = activeTab === sub.tab;
+              {/* Sub-pages list when expanded and not collapsed */}
+              {!isCollapsed && hasSubPages && isExpanded && (
+                <div className="ml-9 pl-2 border-l border-slate-200 my-1 flex flex-col gap-1">
+                  {item.subPages!.map(sub => {
+                    const isSubActive = isItemActive && (window.location.pathname.includes(sub.id) || window.location.hash.includes(sub.id));
                     return (
                       <button
-                        key={sIdx}
-                        onClick={() => setActiveTab(sub.tab)}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left ${
+                        key={sub.id}
+                        type="button"
+                        onClick={() => handleSubPageClick(item, sub.id)}
+                        className={`text-left text-xs px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
                           isSubActive
-                            ? 'text-blue-700 font-bold bg-blue-50/70'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                            ? 'text-blue-600 font-bold bg-blue-50/60'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                         }`}
                       >
-                        <span className="truncate">{sub.name}</span>
-                        {sub.badge && (
-                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${sub.badgeColor || 'bg-slate-100 text-slate-600'}`}>
-                            {sub.badge}
-                          </span>
-                        )}
+                        {sub.label}
                       </button>
                     );
                   })}
@@ -458,13 +392,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse 
         })}
       </div>
 
-      {/* Footer / Location indicator */}
+      {/* Footer / Store indicator */}
       {!isCollapsed && (
         <div className="p-3 bg-slate-50 border-t border-slate-200 text-xs">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Store Edition</div>
           <div className="font-extrabold text-slate-800 text-xs flex items-center gap-1.5 mt-0.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            UltimatePOS v5.4 Complete
+            Nebula ERP Enterprise
           </div>
         </div>
       )}

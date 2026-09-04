@@ -71,15 +71,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegisterModal }) => {
         {/* Brand & Location */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-sm tracking-wider shadow-md shadow-blue-500/30">
-              POS
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-xs tracking-wider shadow-md shadow-blue-500/30">
+              ERP
             </div>
             <div>
               <span className="font-extrabold text-sm tracking-tight text-white block leading-tight">
                 {settings.businessName}
               </span>
               <span className="text-[10px] text-blue-400 font-medium tracking-wide">
-                Ultimate POS v4.2
+                Nebula ERP v5.4
               </span>
             </div>
           </div>

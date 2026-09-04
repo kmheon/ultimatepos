@@ -11,7 +11,8 @@ import {
   Store,
   Printer,
   Database,
-  ArrowRight
+  ArrowRight,
+  Save
 } from 'lucide-react';
 import { usePOS } from '../../context/POSContext';
 
@@ -59,41 +60,17 @@ export const SettingsView: React.FC = () => {
             </div>
           )}
           <button
-            type="button"
-            onClick={() => setActiveTab('import')}
-            className="flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+            type="submit"
+            form="business-settings-form"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
           >
-            <Database className="w-4 h-4" />
-            <span>Data Migration Center</span>
+            <Save className="w-4 h-4" />
+            <span>Save Configuration</span>
           </button>
         </div>
       </div>
 
-      {/* Enterprise Data Migration Center Card under Settings */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 rounded-2xl border border-slate-800 text-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-black tracking-wider bg-blue-500/30 text-blue-300 px-2 py-0.5 rounded border border-blue-400/30">
-              Enterprise Data Migration
-            </span>
-            <h3 className="font-bold text-sm text-white">Enterprise Data Migration Center</h3>
-          </div>
-          <p className="text-xs text-slate-300 max-w-xl">
-            Securely migrate master data and transactional records from legacy ERP, POS, Accounting, and CRM systems into Nebula ERP.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setActiveTab('import')}
-          className="shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer"
-        >
-          <Database className="w-4 h-4" />
-          <span>Open Migration Center</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form id="business-settings-form" onSubmit={handleSubmit} className="space-y-6">
         {/* Business Profile */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">

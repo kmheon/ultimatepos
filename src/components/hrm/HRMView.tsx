@@ -48,10 +48,20 @@ interface PayrollRecord {
   status: 'paid' | 'pending';
 }
 
-export const HRMView: React.FC = () => {
+interface HRMViewProps {
+  initialSubTab?: 'attendance' | 'leaves' | 'payroll' | 'departments';
+}
+
+export const HRMView: React.FC<HRMViewProps> = ({ initialSubTab = 'attendance' }) => {
   const { settings } = usePOS();
-  const [activeSubTab, setActiveSubTab] = useState<'attendance' | 'leaves' | 'payroll' | 'departments'>('attendance');
+  const [activeSubTab, setActiveSubTab] = useState<'attendance' | 'leaves' | 'payroll' | 'departments'>(initialSubTab);
   const [searchQuery, setSearchQuery] = useState('');
+
+  React.useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([
     { id: '1', employeeName: 'Sarah Jenkins', date: '2026-09-01', clockIn: '08:55 AM', clockOut: '05:05 PM', workDuration: '8h 10m', status: 'present' },

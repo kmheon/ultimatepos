@@ -198,7 +198,7 @@ export const ServiceOperationsAnalyticsView: React.FC = () => {
 
   if (isLoading || !data) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[400px] bg-slate-50">
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
         <div className="flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-slate-200">
           <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
           <span className="text-sm font-medium text-slate-700">Loading Executive Service Intelligence Telemetry...</span>
@@ -218,7 +218,7 @@ export const ServiceOperationsAnalyticsView: React.FC = () => {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
+    <div className="space-y-6">
       {/* Toast Notification */}
       {actionSuccessMessage && (
         <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-medium animate-fade-in">
