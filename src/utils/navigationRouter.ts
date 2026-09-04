@@ -40,6 +40,10 @@ const MODULE_ALIASES: Record<string, string> = {
   woocommerce: 'integrations',
   pos: 'pos',
   dashboard: 'dashboard',
+  orders: 'orders',
+  invoices: 'invoices',
+  quotations: 'quotations',
+  returns: 'returns',
 };
 
 export const parseCurrentURL = (): ParsedRoute => {

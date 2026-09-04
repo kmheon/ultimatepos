@@ -174,6 +174,7 @@ interface POSContextType {
   }) => void;
   addExpense: (expense: Omit<Expense, 'id'> | (Omit<Expense, 'id' | 'refNo'> & { refNo?: string })) => void;
   deleteExpense: (id: string) => void;
+  deleteTransaction: (id: string) => void;
   recordInvoicePayment: (transactionId: string, amount: number, method: string) => void;
   updateSettings: (newSettings: Partial<BusinessSettings>) => void;
   setCurrentLocation: (location: BusinessLocation) => void;
@@ -1349,6 +1350,10 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setExpenses(prev => prev.filter(e => e.id !== id));
   };
 
+  const deleteTransaction = (id: string) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
   const recordInvoicePayment = (transactionId: string, amount: number, method: string) => {
     setTransactions(prev =>
       prev.map(tx => {
@@ -1518,6 +1523,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addPurchaseTransaction: addPurchase,
         addExpense,
         deleteExpense,
+        deleteTransaction,
         recordInvoicePayment,
         updateSettings,
         setCurrentLocation,

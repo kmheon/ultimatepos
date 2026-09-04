@@ -51,6 +51,8 @@ export { EmptyState } from './feedback/EmptyState';
 export { Loading } from './feedback/Loading';
 export { Skeleton } from './feedback/Skeleton';
 export { ErrorState } from './feedback/ErrorState';
+export { NebulaTooltip } from './feedback/NebulaTooltip';
+export type { NebulaTooltipProps } from './feedback/NebulaTooltip';
 
 // Buttons
 export { NebulaButton } from './buttons/NebulaButton';

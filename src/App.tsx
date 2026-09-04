@@ -18,6 +18,10 @@ import { SystemAdminView } from './components/systemAdmin/SystemAdminView';
 import { UserManagementView } from './components/users/UserManagementView';
 import { ModulesView } from './components/modules/ModulesView';
 import { WooCommerceView } from './components/woocommerce/WooCommerceView';
+import { QuotationsModuleView } from './components/quotations/QuotationsModuleView';
+import { SalesOrdersModuleView } from './components/sales/SalesOrdersModuleView';
+import { InvoicesModuleView } from './components/sales/InvoicesModuleView';
+import { ReturnsModuleView } from './components/returns/ReturnsModuleView';
 import { parseCurrentURL, updateBrowserURL } from './utils/navigationRouter';
 
 const MainContent: React.FC = () => {
@@ -25,7 +29,18 @@ const MainContent: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [initialSubTab, setInitialSubTab] = useState<string | undefined>(undefined);
 
-  // Initialize deep-linking and browser navigation listener
+  const prevActiveTabRef = React.useRef(activeTab);
+
+  // Auto-collapse sidebar only when entering POS terminal, expand when leaving POS
+  useEffect(() => {
+    if (activeTab === 'pos' && prevActiveTabRef.current !== 'pos') {
+      setIsSidebarCollapsed(true);
+    } else if (activeTab !== 'pos' && prevActiveTabRef.current === 'pos') {
+      setIsSidebarCollapsed(false);
+    }
+    prevActiveTabRef.current = activeTab;
+  }, [activeTab]);
+
   useEffect(() => {
     const handleLocationChange = () => {
       const parsed = parseCurrentURL();
@@ -70,10 +85,12 @@ const MainContent: React.FC = () => {
             <ServiceManagementView initialSubTab={initialSubTab} />
           )}
 
-          {/* Sales Module */}
-          {activeTab === 'sales' && <SalesModuleView initialSubTab={initialSubTab || 'orders'} />}
-          {activeTab === 'quotations' && <SalesModuleView initialSubTab="quotations" />}
-          {activeTab === 'returns' && <SalesModuleView initialSubTab="returns" />}
+          {/* Commercial Workflow Modules */}
+          {activeTab === 'sales' && <SalesModuleView initialSubTab={initialSubTab || 'dashboard'} />}
+          {activeTab === 'quotations' && <QuotationsModuleView initialSubTab={initialSubTab || 'pipeline'} />}
+          {activeTab === 'orders' && <SalesOrdersModuleView initialSubTab={initialSubTab || 'active'} />}
+          {activeTab === 'invoices' && <InvoicesModuleView initialSubTab={initialSubTab || 'all'} />}
+          {activeTab === 'returns' && <ReturnsModuleView initialSubTab={initialSubTab || 'active'} />}
 
           {/* Purchases / Procurement Module */}
           {(activeTab === 'purchases' || activeTab === 'procurement') && (

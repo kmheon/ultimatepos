@@ -35,7 +35,9 @@ import {
   HelpCircle,
   ArrowRight,
   RefreshCw,
-  Smartphone
+  Smartphone,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { usePOS } from '../../context/POSContext';
 import { Product, Contact, Transaction } from '../../types';
@@ -83,9 +85,50 @@ export const POSTerminal: React.FC = () => {
 
   // Active POS Sub-Tab (Workspace)
   const [activePosTab, setActivePosTab] = useState('retail');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error('Error attempting to enable fullscreen:', err);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
 
   // Sales Types & Enterprise Fields (CamneX Bangladesh)
   const [salesType, setSalesType] = useState<'retail' | 'service' | 'installation' | 'maintenance' | 'rental' | 'subscription' | 'internal'>('retail');
+  const [drafts, setDrafts] = useState<Array<{ id: string; invoiceNo: string; customer: string; date: string; itemsCount: number; total: number; cart: any[] }>>([
+    { id: 'draft-1', invoiceNo: 'DRF-2026-001', customer: 'Rahim Enterprise', date: '2026-09-04 10:30', itemsCount: 3, total: 24500, cart: [] },
+    { id: 'draft-2', invoiceNo: 'DRF-2026-002', customer: 'Dhaka Cyber Cafe', date: '2026-09-04 11:15', itemsCount: 1, total: 8500, cart: [] },
+  ]);
+
+  const handleSaveDraft = () => {
+    if (cart.length === 0) return;
+    const newDraft = {
+      id: `draft-${Date.now()}`,
+      invoiceNo: `DRF-2026-${String(drafts.length + 1).padStart(3, '0')}`,
+      customer: selectedCustomer?.name || 'Walk-in Customer',
+      date: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      itemsCount: cart.reduce((acc, i) => acc + i.quantity, 0),
+      total: cartTotal,
+      cart: [...cart]
+    };
+    setDrafts(prev => [newDraft, ...prev]);
+    clearCart();
+    alert(`Order saved as draft (${newDraft.invoiceNo}) successfully!`);
+  };
   const [salesperson, setSalesperson] = useState('Tanvir Ahmed (CamneX Lead)');
   const [selectedBranch, setSelectedBranch] = useState(currentLocation.name);
   const [selectedWarehouse, setSelectedWarehouse] = useState('Main Dhaka Central WH');
@@ -213,6 +256,7 @@ export const POSTerminal: React.FC = () => {
         { id: 'retail', label: 'Retail Sales', icon: ShoppingBag, priority: 1 },
         { id: 'service', label: 'Service Sales', icon: Wrench, priority: 2, badge: repairJobSheets.length > 0 ? String(repairJobSheets.length) : undefined },
         { id: 'quotations', label: 'Quotations', icon: FileText, priority: 3, badge: quotations.length > 0 ? String(quotations.length) : undefined },
+        { id: 'drafts', label: 'Drafts', icon: FileText, priority: 3.1, badge: drafts.length > 0 ? String(drafts.length) : undefined },
         { id: 'returns', label: 'Returns', icon: RotateCcw, priority: 4 },
         { id: 'layaway', label: 'Layaway', icon: Clock, priority: 5 },
         { id: 'transactions', label: 'Recent Transactions', icon: Receipt, priority: 6, badge: String(transactions.length) },
@@ -230,6 +274,22 @@ export const POSTerminal: React.FC = () => {
               <span>Resume Held ({heldOrders.length})</span>
             </button>
           )}
+          <button
+            onClick={handleSaveDraft}
+            disabled={cart.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-semibold hover:bg-indigo-100 disabled:opacity-50"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Save Draft</span>
+          </button>
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-300"
+          >
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{isFullscreen ? 'Exit Full' : 'Fullscreen'}</span>
+          </button>
           <button
             onClick={() => {
               if (cart.length > 0) setShowHoldPrompt(true);
@@ -255,7 +315,77 @@ export const POSTerminal: React.FC = () => {
         </div>
       }
     >
-      <div className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden bg-slate-100 -m-6">
+      {activePosTab === 'drafts' ? (
+        <div className="flex-1 p-6 bg-slate-50 overflow-y-auto -m-6">
+          <div className="max-w-5xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Saved Draft Orders</h2>
+                <p className="text-sm text-slate-500">Manage, resume, or delete unfinished sales and draft invoices.</p>
+              </div>
+              <span className="px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-full">
+                {drafts.length} Active Drafts
+              </span>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase">
+                    <th className="p-4">Draft Reference</th>
+                    <th className="p-4">Customer</th>
+                    <th className="p-4">Date & Time</th>
+                    <th className="p-4">Items</th>
+                    <th className="p-4 text-right">Total Amount</th>
+                    <th className="p-4 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {drafts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-500">
+                        No draft orders saved currently.
+                      </td>
+                    </tr>
+                  ) : (
+                    drafts.map(d => (
+                      <tr key={d.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-4 font-bold text-indigo-600">{d.invoiceNo}</td>
+                        <td className="p-4 font-medium text-slate-800">{d.customer}</td>
+                        <td className="p-4 text-slate-500 text-xs">{d.date}</td>
+                        <td className="p-4 text-slate-700">{d.itemsCount} items</td>
+                        <td className="p-4 text-right font-bold text-slate-900">{settings.currencySymbol}{d.total.toLocaleString()}</td>
+                        <td className="p-4 text-center space-x-2">
+                          <button
+                            onClick={() => {
+                              alert(`Resumed draft ${d.invoiceNo}`);
+                              setActivePosTab('retail');
+                            }}
+                            className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 shadow-xs"
+                          >
+                            Resume
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete draft ${d.invoiceNo}?`)) {
+                                setDrafts(prev => prev.filter(item => item.id !== d.id));
+                              }
+                            }}
+                            className="px-3 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold hover:bg-rose-100"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden bg-slate-100 -m-6">
         
         {/* ========================================================================= */}
         {/* LEFT PANEL: CUSTOMER & ENTERPRISE SALE METADATA                           */}
@@ -778,6 +908,18 @@ export const POSTerminal: React.FC = () => {
               </div>
             </div>
 
+            {/* Save as Draft Button */}
+            <div className="pt-1">
+              <button
+                disabled={cart.length === 0}
+                onClick={handleSaveDraft}
+                className="w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 shadow-2xs"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Save as Draft</span>
+              </button>
+            </div>
+
             {/* Bangladesh Payment Methods & Quick Checkout */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
               <button
@@ -1040,6 +1182,7 @@ export const POSTerminal: React.FC = () => {
         </div>
 
       </div>
+      )}
 
       {/* MODALS */}
       <CheckoutModal

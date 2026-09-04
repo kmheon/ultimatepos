@@ -694,6 +694,8 @@ export type ActiveTab =
   | 'repairs'
   | 'sales'
   | 'quotations'
+  | 'orders'
+  | 'invoices'
   | 'returns'
   | 'purchases'
   | 'transfers'

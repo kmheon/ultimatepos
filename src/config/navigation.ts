@@ -135,9 +135,9 @@ export const buildNavigationMenu = (ctx: NavigationContextValues = {}): Navigati
       subItems: [
         { name: 'Dashboard', tab: 'sales' },
         { name: 'POS', tab: 'pos' },
-        { name: 'Sales Orders', tab: 'sales' },
+        { name: 'Sales Orders', tab: 'orders' },
         { name: 'Quotations', tab: 'quotations', badge: activeQuotesCount > 0 ? activeQuotesCount : undefined, badgeColor: 'bg-sky-100 text-sky-800' },
-        { name: 'Invoices', tab: 'sales' },
+        { name: 'Invoices', tab: 'invoices' },
         { name: 'Returns', tab: 'returns' },
         { name: 'Shipments', tab: 'sales' },
         { name: 'Discounts', tab: 'sales' },

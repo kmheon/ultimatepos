@@ -283,8 +283,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
   };
 
   const handleSubPageClick = (mod: ERPModuleItem, subId: string) => {
-    setActiveTab(mod.tab as any);
-    updateBrowserURL(mod.id, subId);
+    if (mod.id === 'sales' && ['orders', 'quotations', 'invoices', 'returns'].includes(subId)) {
+      setActiveTab(subId as any);
+      updateBrowserURL(subId);
+    } else {
+      setActiveTab(mod.tab as any);
+      updateBrowserURL(mod.id, subId);
+    }
   };
 
   return (

@@ -20,7 +20,7 @@ import { ModuleHeader } from '../layout/ModuleHeader';
 import { WorkspaceNav, WorkspaceItem } from '../layout/WorkspaceNav';
 import { SalesList } from './SalesList';
 import { ReturnsView } from '../returns/ReturnsView';
-import { ReportsView } from '../reports/ReportsView';
+import { SalesReportsWorkspace } from './SalesReportsWorkspace';
 import { POSTerminal } from '../pos/POSTerminal';
 import { updateBrowserURL } from '../../utils/navigationRouter';
 
@@ -200,14 +200,7 @@ export const SalesModuleView: React.FC<SalesModuleViewProps> = ({ initialSubTab 
 
         {activeSubTab === 'reports' && (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <WorkspaceNav
-              workspaces={salesWorkspaces}
-              activeWorkspace={activeWorkspace}
-              onWorkspaceChange={setActiveWorkspace}
-            />
-            <div className="flex-1 overflow-y-auto p-6">
-              <ReportsView initialReportTab="sales" />
-            </div>
+            <SalesReportsWorkspace />
           </div>
         )}
       </div>
