@@ -65,8 +65,14 @@ export const ProductsPageView: React.FC = () => {
   // Filter and Sort Logic
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      // Category filter
-      if (categoryFilter !== 'all' && p.categoryId !== categoryFilter) return false;
+      // Category filter (matches the selected category or any of its subcategories)
+      if (categoryFilter !== 'all') {
+        const matchingIds = new Set([
+          categoryFilter,
+          ...categories.filter(c => c.parentId === categoryFilter).map(c => c.id)
+        ]);
+        if (!matchingIds.has(p.categoryId)) return false;
+      }
 
       // Brand filter
       if (brandFilter !== 'all' && p.brandId !== brandFilter) return false;
@@ -387,7 +393,7 @@ export const ProductsPageView: React.FC = () => {
               <option value="all">All Categories ({categories.length})</option>
               {categories.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.parentId && c.parentName ? `↳ ${c.parentName} → ${c.name}` : c.name}
                 </option>
               ))}
             </select>

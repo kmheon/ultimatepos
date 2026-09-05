@@ -98,8 +98,8 @@ const MainContent: React.FC = () => {
           )}
 
           {/* Inventory Module */}
-          {(activeTab === 'inventory' || activeTab === 'products') && (
-            <InventoryModuleView initialSubTab={initialSubTab || 'products'} />
+          {(activeTab === 'inventory' || activeTab === 'products' || activeTab === 'categories' || activeTab === 'brands' || activeTab === 'stock') && (
+            <InventoryModuleView initialSubTab={initialSubTab || (activeTab === 'categories' ? 'categories' : activeTab === 'brands' ? 'brands' : activeTab === 'stock' ? 'stock' : activeTab === 'products' ? 'products' : 'dashboard')} />
           )}
           {activeTab === 'transfers' && <InventoryModuleView initialSubTab="transfers" />}
           {activeTab === 'adjustments' && <InventoryModuleView initialSubTab="adjustments" />}

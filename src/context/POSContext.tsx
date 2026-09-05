@@ -152,7 +152,11 @@ interface POSContextType {
   deleteProduct: (id: string) => void;
   adjustStock: (productId: string, change: number, reason: string) => void;
   addCategory: (category: Omit<Category, 'id'>) => void;
+  updateCategory: (id: string, updates: Partial<Category>) => void;
+  deleteCategory: (id: string) => void;
   addBrand: (brand: Omit<Brand, 'id'>) => void;
+  updateBrand: (id: string, updates: Partial<Brand>) => void;
+  deleteBrand: (id: string) => void;
   addContact: (contact: Omit<Contact, 'id'>) => Contact;
   updateContact: (id: string, updates: Partial<Contact>) => void;
   deleteContact: (id: string) => void;
@@ -198,12 +202,51 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [categories, setCategories] = useState<Category[]>(() => {
     const saved = localStorage.getItem('upos_categories_v2');
-    return saved ? JSON.parse(saved) : initialCategories;
+    if (saved) {
+      try {
+        const parsed: Category[] = JSON.parse(saved);
+        const existingIds = new Set(parsed.map(c => c.id));
+        const enriched = parsed.map(c => {
+          const init = initialCategories.find(ic => ic.id === c.id);
+          return {
+            ...c,
+            image: c.image || init?.image,
+            parentId: c.parentId !== undefined ? c.parentId : (init?.parentId ?? null),
+            parentName: c.parentName || init?.parentName,
+          };
+        });
+        const missingInitial = initialCategories.filter(c => !existingIds.has(c.id));
+        return [...enriched, ...missingInitial];
+      } catch {
+        return initialCategories;
+      }
+    }
+    return initialCategories;
   });
 
   const [brands, setBrands] = useState<Brand[]>(() => {
     const saved = localStorage.getItem('upos_brands_v2');
-    return saved ? JSON.parse(saved) : initialBrands;
+    if (saved) {
+      try {
+        const parsed: Brand[] = JSON.parse(saved);
+        const existingIds = new Set(parsed.map(b => b.id));
+        // Enrich existing with initial logos if missing
+        const enriched = parsed.map(b => {
+          const init = initialBrands.find(ib => ib.id === b.id);
+          return {
+            ...b,
+            logo: b.logo || init?.logo,
+            parentId: b.parentId !== undefined ? b.parentId : (init?.parentId ?? null),
+            parentName: b.parentName || init?.parentName,
+          };
+        });
+        const missingInitial = initialBrands.filter(b => !existingIds.has(b.id));
+        return [...enriched, ...missingInitial];
+      } catch {
+        return initialBrands;
+      }
+    }
+    return initialBrands;
   });
 
   const [contacts, setContacts] = useState<Contact[]>(() => {
@@ -1233,12 +1276,93 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Categories & Brands
   const addCategory = (cat: Omit<Category, 'id'>) => {
     const id = `cat-${Date.now()}`;
-    setCategories(prev => [...prev, { ...cat, id, productCount: 0 }]);
+    setCategories(prev => {
+      const parent = cat.parentId ? prev.find(c => c.id === cat.parentId) : null;
+      const parentName = parent ? parent.name : (cat.parentName || undefined);
+      return [...prev, { ...cat, id, parentId: cat.parentId || null, parentName, productCount: 0 }];
+    });
+  };
+
+  const updateCategory = (id: string, updates: Partial<Category>) => {
+    setCategories(prev => {
+      const current = prev.find(c => c.id === id);
+      const targetParentId = updates.parentId !== undefined ? updates.parentId : current?.parentId;
+      const parent = targetParentId ? prev.find(c => c.id === targetParentId) : null;
+
+      return prev.map(c => {
+        if (c.id === id) {
+          return {
+            ...c,
+            ...updates,
+            parentId: targetParentId || null,
+            parentName: targetParentId && parent ? parent.name : undefined,
+          };
+        }
+        // If this category is a parent of other categories and its name changed, update the children's parentName
+        if (c.parentId === id && updates.name) {
+          return { ...c, parentName: updates.name };
+        }
+        return c;
+      });
+    });
+  };
+
+  const deleteCategory = (id: string) => {
+    setCategories(prev => {
+      // Unlink any children so they become top-level categories
+      return prev
+        .filter(c => c.id !== id)
+        .map(c => (c.parentId === id ? { ...c, parentId: null, parentName: undefined } : c));
+    });
   };
 
   const addBrand = (b: Omit<Brand, 'id'>) => {
     const id = `br-${Date.now()}`;
-    setBrands(prev => [...prev, { ...b, id }]);
+    setBrands(prev => {
+      const parent = b.parentId ? prev.find(p => p.id === b.parentId) : null;
+      const parentName = parent ? parent.name : (b.parentName || undefined);
+      return [...prev, { ...b, id, parentId: b.parentId || null, parentName }];
+    });
+  };
+
+  const updateBrand = (id: string, updates: Partial<Brand>) => {
+    setBrands(prev => {
+      const current = prev.find(b => b.id === id);
+      const targetParentId = updates.parentId !== undefined ? updates.parentId : current?.parentId;
+      const parent = targetParentId ? prev.find(b => b.id === targetParentId) : null;
+
+      return prev.map(b => {
+        if (b.id === id) {
+          return {
+            ...b,
+            ...updates,
+            parentId: targetParentId || null,
+            parentName: targetParentId && parent ? parent.name : undefined,
+          };
+        }
+        if (b.parentId === id && updates.name) {
+          return { ...b, parentName: updates.name };
+        }
+        return b;
+      });
+    });
+
+    if (updates.name) {
+      setProducts(prev =>
+        prev.map(p => (p.brandId === id ? { ...p, brandName: updates.name } : p))
+      );
+    }
+  };
+
+  const deleteBrand = (id: string) => {
+    setBrands(prev => {
+      return prev
+        .filter(b => b.id !== id)
+        .map(b => (b.parentId === id ? { ...b, parentId: null, parentName: undefined } : b));
+    });
+    setProducts(prev =>
+      prev.map(p => (p.brandId === id ? { ...p, brandId: undefined, brandName: undefined } : p))
+    );
   };
 
   // Contacts
@@ -1557,7 +1681,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteProduct,
         adjustStock,
         addCategory,
+        updateCategory,
+        deleteCategory,
         addBrand,
+        updateBrand,
+        deleteBrand,
         addContact,
         updateContact,
         deleteContact,

@@ -1,18 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Package, 
-  LayoutDashboard, 
-  Layers, 
-  Tag, 
-  Boxes, 
-  ArrowLeftRight, 
-  SlidersHorizontal, 
-  BarChart3,
   Plus
 } from 'lucide-react';
 import { usePOS } from '../../context/POSContext';
 import { ModuleHeader } from '../layout/ModuleHeader';
-import { WorkspaceNav, WorkspaceItem } from '../layout/WorkspaceNav';
 import { InventoryDashboardView } from './InventoryDashboardView';
 import { ProductList } from '../products/ProductList';
 import { InventoryCategoriesView } from './InventoryCategoriesView';
@@ -41,17 +33,6 @@ interface InventoryModuleViewProps {
 export const InventoryModuleView: React.FC<InventoryModuleViewProps> = ({ initialSubTab = 'dashboard' }) => {
   const { products, categories, settings } = usePOS();
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
-
-  const inventoryWorkspaces: WorkspaceItem[] = useMemo(() => [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Real-time warehouse operations & health', priority: 1 },
-    { id: 'products', label: 'Products', icon: Package, description: 'Master product catalogue management', priority: 2 },
-    { id: 'categories', label: 'Categories', icon: Layers, description: 'Taxonomy groups & hierarchy', priority: 3 },
-    { id: 'brands', label: 'Brands', icon: Tag, description: 'Manufacturer brand portfolio', priority: 4 },
-    { id: 'stock', label: 'Stock', icon: Boxes, description: 'Warehouse stock levels & reorders', priority: 5 },
-    { id: 'transfers', label: 'Transfers', icon: ArrowLeftRight, description: 'Inter-branch inventory transfers', priority: 6 },
-    { id: 'adjustments', label: 'Adjustments', icon: SlidersHorizontal, description: 'Audit corrections & variance log', priority: 7 },
-    { id: 'reports', label: 'Reports', icon: BarChart3, description: 'Warehouse analytics & ABC analysis', priority: 8 },
-  ], []);
 
   const normalizedSubTab: InventorySubTab = useMemo(() => {
     if (!initialSubTab) return 'dashboard';
@@ -124,15 +105,11 @@ export const InventoryModuleView: React.FC<InventoryModuleViewProps> = ({ initia
         )}
 
         {activeSubTab === 'transfers' && (
-          <div className="flex-1 overflow-y-auto p-6">
-            <TransfersView />
-          </div>
+          <TransfersView />
         )}
 
         {activeSubTab === 'adjustments' && (
-          <div className="flex-1 overflow-y-auto p-6">
-            <StockAdjustmentView />
-          </div>
+          <StockAdjustmentView />
         )}
 
         {activeSubTab === 'reports' && (

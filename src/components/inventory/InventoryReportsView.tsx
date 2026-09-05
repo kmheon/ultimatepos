@@ -30,13 +30,14 @@ interface InventoryReportsViewProps {
 }
 
 export const InventoryReportsView: React.FC<InventoryReportsViewProps> = ({ initialTab = 'overview' }) => {
-  const { products, categories, settings } = usePOS();
+  const { products, categories, locations, settings } = usePOS();
   const [activeTab, setActiveTab] = useState<InventoryReportTab>((initialTab as InventoryReportTab) || 'overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState('This Month');
   const [warehouseFilter, setWarehouseFilter] = useState('All Warehouses');
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isCustomExportModalOpen, setIsCustomExportModalOpen] = useState(false);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
   
   const [exportFields, setExportFields] = useState({
     totalValuation: true,
@@ -50,12 +51,12 @@ export const InventoryReportsView: React.FC<InventoryReportsViewProps> = ({ init
   });
   const [customExportFormat, setCustomExportFormat] = useState<'csv' | 'excel'>('csv');
 
-  const totalValuation = products.reduce((sum, p) => sum + (p.purchasePrice * p.currentStock), 184500);
+  const totalValuation = products.reduce((sum, p) => sum + (p.purchasePrice * p.currentStock), 0);
   const stockTurnover = 6.2;
   const carryingCost = 14.5;
-  const deadStockValue = 12400;
+  const deadStockValue = products.filter(p => p.currentStock > 30).reduce((s, p) => s + (p.purchasePrice * 2), 4800);
   const lowStockCount = products.filter(p => p.currentStock <= p.alertQuantity).length;
-  const inventoryAccuracy = 98.6;
+  const inventoryAccuracy = 99.1;
 
   const workspaces: NebulaWorkspaceItem[] = useMemo(() => [
     { id: 'overview', label: 'Executive Overview', icon: BarChart3, description: 'High-level inventory health & financial valuation' },
@@ -95,7 +96,8 @@ export const InventoryReportsView: React.FC<InventoryReportsViewProps> = ({ init
     } else if (format === 'print') {
       window.print();
     } else {
-      alert(`Inventory Report export (${format.toUpperCase()}) successfully generated and dispatched.`);
+      setExportNotice(`Inventory Report export (${format.toUpperCase()}) successfully generated and dispatched.`);
+      setTimeout(() => setExportNotice(null), 4000);
     }
   };
 
@@ -155,10 +157,12 @@ export const InventoryReportsView: React.FC<InventoryReportsViewProps> = ({ init
             onChange={(e) => setWarehouseFilter(e.target.value)}
             className="px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-bold text-slate-700 cursor-pointer shadow-2xs"
           >
-            <option>All Warehouses</option>
-            <option>Central Distribution Hub</option>
-            <option>Eastside Depot</option>
-            <option>Fulfillment Terminal 3</option>
+            <option value="All Warehouses">All Warehouses ({locations.length})</option>
+            {locations.map(loc => (
+              <option key={loc.id} value={loc.name}>
+                {loc.name}
+              </option>
+            ))}
           </select>
           <div className="relative">
             <button
@@ -196,6 +200,18 @@ export const InventoryReportsView: React.FC<InventoryReportsViewProps> = ({ init
       }
     >
       <div className="flex flex-col space-y-6">
+        {exportNotice && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl flex items-center justify-between animate-in fade-in duration-150">
+            <span>{exportNotice}</span>
+            <button
+              onClick={() => setExportNotice(null)}
+              className="text-emerald-600 hover:text-emerald-900 font-bold ml-4"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Top KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">

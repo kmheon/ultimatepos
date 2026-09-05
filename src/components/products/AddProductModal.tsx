@@ -7,12 +7,16 @@ interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   productToEdit?: Product | null;
+  defaultCategoryId?: string;
+  defaultBrandId?: string;
 }
 
 export const AddProductModal: React.FC<AddProductModalProps> = ({
   isOpen,
   onClose,
   productToEdit,
+  defaultCategoryId,
+  defaultBrandId,
 }) => {
   const { categories, brands, addProduct, updateProduct, settings } = usePOS();
 
@@ -57,8 +61,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setName('');
       setSku(`SKU-${Date.now().toString().slice(-6)}`);
       setBarcode(`890${Date.now().toString().slice(-10)}`);
-      setCategoryId(categories[0]?.id || '');
-      setBrandId(brands[0]?.id || '');
+      setCategoryId(defaultCategoryId || categories[0]?.id || '');
+      setBrandId(defaultBrandId || brands[0]?.id || '');
       setUnit('Pc');
       setPurchasePrice('10.00');
       setSellingPrice('19.99');
@@ -192,7 +196,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 >
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {c.parentId && c.parentName ? `↳ ${c.parentName} → ${c.name}` : c.name}
                     </option>
                   ))}
                 </select>
@@ -208,7 +212,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                   <option value="">No Brand / Generic</option>
                   {brands.map(b => (
                     <option key={b.id} value={b.id}>
-                      {b.name}
+                      {b.parentId && b.parentName ? `↳ ${b.parentName} → ${b.name}` : b.name}
                     </option>
                   ))}
                 </select>

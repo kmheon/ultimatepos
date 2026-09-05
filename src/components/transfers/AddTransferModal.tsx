@@ -15,6 +15,7 @@ export const AddTransferModal: React.FC<AddTransferModalProps> = ({ onClose }) =
   const [shippingCharges, setShippingCharges] = useState('25.00');
   const [notes, setNotes] = useState('Stock replenishment dispatch.');
   const [status, setStatus] = useState<'pending' | 'in_transit' | 'completed'>('in_transit');
+  const [error, setError] = useState('');
 
   const [selectedProductToAdd, setSelectedProductToAdd] = useState('');
   const [items, setItems] = useState<StockTransferItem[]>([
@@ -63,11 +64,11 @@ export const AddTransferModal: React.FC<AddTransferModalProps> = ({ onClose }) =
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (fromLocationId === toLocationId) {
-      alert('Source and destination locations cannot be the same!');
+      setError('Source and destination locations cannot be the same!');
       return;
     }
     if (items.length === 0) {
-      alert('Please add at least one product to transfer.');
+      setError('Please add at least one product to transfer.');
       return;
     }
 
@@ -115,6 +116,12 @@ export const AddTransferModal: React.FC<AddTransferModalProps> = ({ onClose }) =
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+          {error && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-semibold">
+              {error}
+            </div>
+          )}
+
           {/* Location Picker */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>

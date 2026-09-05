@@ -28,13 +28,24 @@ export interface Category {
   name: string;
   shortCode: string;
   description?: string;
+  parentId?: string | null;
+  parentName?: string;
   productCount?: number;
+  image?: string;
+  icon?: string;
 }
 
 export interface Brand {
   id: string;
   name: string;
   description?: string;
+  country?: string;
+  website?: string;
+  status?: 'active' | 'inactive';
+  logo?: string;
+  parentId?: string | null;
+  parentName?: string;
+  productCount?: number;
 }
 
 export interface Contact {
@@ -691,6 +702,9 @@ export type ActiveTab =
   | 'service'
   | 'users'
   | 'products'
+  | 'categories'
+  | 'brands'
+  | 'stock'
   | 'repairs'
   | 'sales'
   | 'quotations'

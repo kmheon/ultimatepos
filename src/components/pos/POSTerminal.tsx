@@ -1014,11 +1014,19 @@ export const POSTerminal: React.FC = () => {
                       <button
                         key={c.id}
                         onClick={() => setSelectedCategory(c.id)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
-                          selectedCategory === c.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+                          selectedCategory === c.id ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                         }`}
                       >
-                        {c.name}
+                        {c.image && (
+                          <img 
+                            src={c.image} 
+                            alt="" 
+                            referrerPolicy="no-referrer" 
+                            className="w-3.5 h-3.5 rounded-xs object-cover shrink-0" 
+                          />
+                        )}
+                        <span>{c.name}</span>
                       </button>
                     ))}
                   </div>

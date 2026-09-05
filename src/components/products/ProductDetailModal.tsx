@@ -27,23 +27,27 @@ interface ProductDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
-  onEdit: (product: Product) => void;
-  onAdjustStock: (product: Product) => void;
-  onPrintBarcode: (product: Product) => void;
+  onEdit?: (product: Product) => void;
+  onAdjustStock?: (product: Product) => void;
+  onPrintBarcode?: (product: Product) => void;
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   isOpen,
   onClose,
   product,
-  onEdit,
-  onAdjustStock,
-  onPrintBarcode,
+  onEdit = () => {},
+  onAdjustStock = () => {},
+  onPrintBarcode = () => {},
 }) => {
-  const { settings, addToCart, setActiveTab } = usePOS();
+  const { settings, addToCart, setActiveTab, brands } = usePOS();
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   if (!isOpen || !product) return null;
+
+  const matchedBrand = brands.find(
+    b => b.id === product.brandId || (product.brandName && b.name.toLowerCase() === product.brandName.toLowerCase())
+  );
 
   const handleCopy = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -167,8 +171,22 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </span>
                 {product.brandName && (
                   <span className="px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5">
-                    <Tag className="w-3.5 h-3.5 text-slate-500" />
-                    {product.brandName}
+                    {matchedBrand?.logo ? (
+                      <img
+                        src={matchedBrand.logo}
+                        alt={product.brandName}
+                        referrerPolicy="no-referrer"
+                        className="w-3.5 h-3.5 object-contain"
+                      />
+                    ) : (
+                      <Tag className="w-3.5 h-3.5 text-slate-500" />
+                    )}
+                    <span>{product.brandName}</span>
+                    {matchedBrand?.parentName && (
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        ({matchedBrand.parentName})
+                      </span>
+                    )}
                   </span>
                 )}
                 <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-mono">
