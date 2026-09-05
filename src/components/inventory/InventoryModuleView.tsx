@@ -109,11 +109,7 @@ export const InventoryModuleView: React.FC<InventoryModuleViewProps> = ({ initia
           />
         )}
 
-        {activeSubTab === 'products' && (
-          <div className="flex-1 overflow-y-auto">
-            <ProductList />
-          </div>
-        )}
+        {activeSubTab === 'products' && <ProductList />}
 
         {activeSubTab === 'categories' && (
           <InventoryCategoriesView />
