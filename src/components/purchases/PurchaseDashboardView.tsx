@@ -13,7 +13,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { usePOS } from '../../context/POSContext';
-import { NebulaPage, TableCard } from '../../core/ui';
+import { NebulaPage, TableCard, NebulaStatGrid, NebulaStatCard } from '../../core/ui';
 
 interface PurchaseDashboardViewProps {
   onNavigate: (tab: string) => void;
@@ -29,40 +29,78 @@ export const PurchaseDashboardView: React.FC<PurchaseDashboardViewProps> = ({ on
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50">
       {/* Top KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Purchase Spend</p>
-          <p className="text-xl font-black text-slate-900 mt-1">{settings.currencySymbol}{totalSpend.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-        </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending POs</p>
-          <p className="text-xl font-black text-blue-600 mt-1">14 Orders</p>
-        </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Requisitions</p>
-          <p className="text-xl font-black text-amber-600 mt-1">12 Pending</p>
-        </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Suppliers Active</p>
-          <p className="text-xl font-black text-emerald-600 mt-1">{suppliersList.length || 18}</p>
-        </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Goods Awaiting</p>
-          <p className="text-xl font-black text-purple-600 mt-1">6 Shipments</p>
-        </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avg Proc Time</p>
-          <p className="text-xl font-black text-slate-900 mt-1">3.8 Days</p>
-        </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">This Month</p>
-          <p className="text-xl font-black text-emerald-600 mt-1">{settings.currencySymbol}84,200</p>
-        </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inventory Value</p>
-          <p className="text-xl font-black text-blue-600 mt-1">{settings.currencySymbol}612,400</p>
-        </div>
-      </div>
+      <NebulaStatGrid>
+        <NebulaStatCard
+          label="Purchase Spend"
+          value={`${settings.currencySymbol}${totalSpend.toLocaleString(undefined, {maximumFractionDigits: 0})}`}
+          icon={Receipt}
+          iconColor="text-blue-600"
+          iconBgColor="bg-blue-50"
+          statusText="Total procurement"
+        />
+        <NebulaStatCard
+          label="Pending POs"
+          value="14 Orders"
+          icon={Truck}
+          iconColor="text-blue-600"
+          iconBgColor="bg-blue-50"
+          statusText="Awaiting delivery"
+          statusColor="text-blue-600"
+        />
+        <NebulaStatCard
+          label="Requisitions"
+          value="12 Pending"
+          icon={FileSpreadsheet}
+          iconColor="text-amber-600"
+          iconBgColor="bg-amber-50"
+          statusText="Approval queue"
+          statusColor="text-amber-600"
+        />
+        <NebulaStatCard
+          label="Suppliers Active"
+          value={suppliersList.length || 18}
+          icon={Users}
+          iconColor="text-emerald-600"
+          iconBgColor="bg-emerald-50"
+          statusText="Vendor directory"
+          statusColor="text-emerald-600"
+        />
+        <NebulaStatCard
+          label="Goods Awaiting"
+          value="6 Shipments"
+          icon={PackageCheck}
+          iconColor="text-purple-600"
+          iconBgColor="bg-purple-50"
+          statusText="In transit"
+          statusColor="text-purple-600"
+        />
+        <NebulaStatCard
+          label="Avg Proc Time"
+          value="3.8 Days"
+          icon={Clock}
+          iconColor="text-slate-600"
+          iconBgColor="bg-slate-100"
+          statusText="Order to warehouse"
+        />
+        <NebulaStatCard
+          label="This Month"
+          value={`${settings.currencySymbol}84,200`}
+          icon={BarChart3}
+          iconColor="text-emerald-600"
+          iconBgColor="bg-emerald-50"
+          statusText="Monthly volume"
+          statusColor="text-emerald-600"
+        />
+        <NebulaStatCard
+          label="Inventory Value"
+          value={`${settings.currencySymbol}612,400`}
+          icon={ArrowUpRight}
+          iconColor="text-blue-600"
+          iconBgColor="bg-blue-50"
+          statusText="Stock valuation"
+          statusColor="text-blue-600"
+        />
+      </NebulaStatGrid>
 
       {/* Quick Actions & Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

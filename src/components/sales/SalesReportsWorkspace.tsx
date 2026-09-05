@@ -246,42 +246,6 @@ export const SalesReportsWorkspace: React.FC<SalesReportsWorkspaceProps> = ({ in
         {/* EXECUTIVE OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Top KPI Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Revenue</p>
-                <p className="text-xl font-black text-slate-900 mt-1">{settings.currencySymbol}{totalRevenue.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5 mt-1">
-                  <ArrowUpRight className="w-3 h-3" /> +14.2% vs last period
-                </span>
-              </div>
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gross Profit</p>
-                <p className="text-xl font-black text-blue-600 mt-1">{settings.currencySymbol}{grossProfit.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                <span className="text-[10px] font-bold text-slate-500 mt-1 block">38.0% Margin</span>
-              </div>
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Net Profit</p>
-                <p className="text-xl font-black text-emerald-600 mt-1">{settings.currencySymbol}{netProfit.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                <span className="text-[10px] font-bold text-emerald-600 mt-1 block">24.0% Net Margin</span>
-              </div>
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quote Conversion</p>
-                <p className="text-xl font-black text-purple-600 mt-1">68.4%</p>
-                <span className="text-[10px] font-bold text-slate-500 mt-1 block">142 of 208 accepted</span>
-              </div>
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Average Order Value</p>
-                <p className="text-xl font-black text-slate-900 mt-1">{settings.currencySymbol}1,245.50</p>
-                <span className="text-[10px] font-bold text-emerald-600 mt-1 block">+5.8% avg ticket</span>
-              </div>
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Refunds & Returns</p>
-                <p className="text-xl font-black text-rose-600 mt-1">{settings.currencySymbol}{refundAmount.toLocaleString()}</p>
-                <span className="text-[10px] font-bold text-rose-500 mt-1 block">1.4% Return Ratio</span>
-              </div>
-            </div>
-
             {/* Revenue Separation Panel (Mandatory Rule) */}
             <SummaryCard title="Revenue Separation & Financial Breakdown" subtitle="Detailed segregation of product, installation, delivery, and service revenue streams">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-2">

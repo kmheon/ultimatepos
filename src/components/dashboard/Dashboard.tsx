@@ -27,6 +27,7 @@ import {
   Cell
 } from 'recharts';
 import { usePOS } from '../../context/POSContext';
+import { NebulaStatGrid, NebulaStatCard } from '../../core/ui';
 import { Transaction } from '../../types';
 import { InvoiceModal } from '../sales/InvoiceModal';
 
@@ -103,77 +104,45 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Sales */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Sales</span>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <DollarSign className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-              {settings.currencySymbol}{totalSalesAmount.toFixed(2)}
-            </h3>
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-emerald-600 font-semibold">
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>+18.4% from last period</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Net Profit */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Net Profit</span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-emerald-600 tracking-tight">
-              {settings.currencySymbol}{netProfit.toFixed(2)}
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">Gross Margin: ~{((grossProfit / (totalSalesAmount || 1)) * 100).toFixed(1)}%</p>
-          </div>
-        </div>
-
-        {/* Invoices Count */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Invoices</span>
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Receipt className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-              {salesTransactions.length}
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">Avg Ticket: {settings.currencySymbol}{(totalSalesAmount / (salesTransactions.length || 1)).toFixed(2)}</p>
-          </div>
-        </div>
-
-        {/* Low Stock Alerts */}
-        <div 
+      <NebulaStatGrid>
+        <NebulaStatCard
+          label="Total Sales"
+          value={`${settings.currencySymbol}${totalSalesAmount.toFixed(2)}`}
+          icon={DollarSign}
+          iconColor="text-blue-600"
+          iconBgColor="bg-blue-50"
+          trend="up"
+          trendText="+18.4% from last period"
+        />
+        <NebulaStatCard
+          label="Net Profit"
+          value={`${settings.currencySymbol}${netProfit.toFixed(2)}`}
+          icon={TrendingUp}
+          iconColor="text-emerald-600"
+          iconBgColor="bg-emerald-50"
+          statusText={`Gross Margin: ~${((grossProfit / (totalSalesAmount || 1)) * 100).toFixed(1)}%`}
+          statusColor="text-slate-500"
+        />
+        <NebulaStatCard
+          label="Total Invoices"
+          value={salesTransactions.length}
+          icon={Receipt}
+          iconColor="text-purple-600"
+          iconBgColor="bg-purple-50"
+          statusText={`Avg Ticket: ${settings.currencySymbol}${(totalSalesAmount / (salesTransactions.length || 1)).toFixed(2)}`}
+          statusColor="text-slate-500"
+        />
+        <NebulaStatCard
+          label="Stock Alerts"
+          value={`${lowStockProducts.length} Items Low`}
+          icon={AlertTriangle}
+          iconColor={lowStockProducts.length > 0 ? 'text-amber-600' : 'text-slate-400'}
+          iconBgColor={lowStockProducts.length > 0 ? 'bg-amber-50' : 'bg-slate-50'}
+          statusText="Click to manage inventory →"
+          statusColor="text-slate-400 group-hover:text-blue-600"
           onClick={() => setActiveTab('products')}
-          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs hover:shadow-md transition-shadow cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Stock Alerts</span>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${lowStockProducts.length > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400'}`}>
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className={`text-2xl font-black tracking-tight ${lowStockProducts.length > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
-              {lowStockProducts.length} Items Low
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 group-hover:text-blue-600 transition-colors">Click to manage inventory →</p>
-          </div>
-        </div>
-      </div>
+        />
+      </NebulaStatGrid>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

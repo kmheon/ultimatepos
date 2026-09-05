@@ -69,3 +69,9 @@ export { NebulaChartContainer } from './charts/NebulaChartContainer';
 // Timeline
 export { NebulaTimeline } from './timeline/NebulaTimeline';
 export type { TimelineItem } from './timeline/NebulaTimeline';
+
+// Dashboard Stats
+export { NebulaStatCard } from './components/dashboard/NebulaStatCard';
+export type { NebulaStatCardProps } from './components/dashboard/NebulaStatCard';
+export { NebulaStatGrid } from './components/dashboard/NebulaStatGrid';
+export type { NebulaStatGridProps } from './components/dashboard/NebulaStatGrid';

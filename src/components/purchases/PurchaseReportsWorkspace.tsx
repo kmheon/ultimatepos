@@ -217,42 +217,6 @@ export const PurchaseReportsWorkspace: React.FC<PurchaseReportsWorkspaceProps> =
       }
     >
       <div className="flex flex-col space-y-6">
-        {/* Top KPIs (Consistent across tabs) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Purchase Value</p>
-            <p className="text-xl font-black text-slate-900 mt-1">{settings.currencySymbol}{totalPurchaseValue.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-            <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5 mt-1">
-              <ArrowUpRight className="w-3 h-3" /> +8.4% vs last period
-            </span>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Average Purchase Cost</p>
-            <p className="text-xl font-black text-slate-900 mt-1">{settings.currencySymbol}{avgPurchaseCost.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-            <span className="text-[10px] font-bold text-slate-500 mt-1 block">Per PO batch</span>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Procurement Savings</p>
-            <p className="text-xl font-black text-emerald-600 mt-1">{settings.currencySymbol}{procurementSavings.toLocaleString()}</p>
-            <span className="text-[10px] font-bold text-emerald-600 mt-1 block">Volume discounts</span>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Supplier SLA Rating</p>
-            <p className="text-xl font-black text-blue-600 mt-1">{supplierSla}%</p>
-            <span className="text-[10px] font-bold text-blue-600 mt-1 block">On-time delivery</span>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lead Time Velocity</p>
-            <p className="text-xl font-black text-purple-600 mt-1">3.8 Days</p>
-            <span className="text-[10px] font-bold text-slate-500 mt-1 block">Order to warehouse</span>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending Payables</p>
-            <p className="text-xl font-black text-amber-600 mt-1">{settings.currencySymbol}73,100</p>
-            <span className="text-[10px] font-bold text-amber-600 mt-1 block">Net 30/60 terms</span>
-          </div>
-        </div>
-
         {/* TAB 1: EXECUTIVE OVERVIEW */}
         {activeTab === 'overview' && (
           <div className="space-y-6">

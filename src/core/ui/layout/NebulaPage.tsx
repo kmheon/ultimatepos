@@ -30,6 +30,7 @@ export interface NebulaPageProps {
   onExportCSV?: () => void;
   onExportPDF?: () => void;
   extraToolbarActions?: React.ReactNode;
+  showWorkspaceHero?: boolean;
 
   children: React.ReactNode;
 }
@@ -53,6 +54,7 @@ export const NebulaPage: React.FC<NebulaPageProps> = ({
   onExportPDF,
   extraToolbarActions,
   children,
+  showWorkspaceHero = false,
 }) => {
   const hasWorkspaces = workspaces && workspaces.length > 0 && activeWorkspace && onWorkspaceChange;
   const hasToolbar = searchValue !== undefined && onSearchChange !== undefined;
@@ -60,13 +62,15 @@ export const NebulaPage: React.FC<NebulaPageProps> = ({
   return (
     <ModuleLayout
       header={
-        <NebulaModuleHeader
-          icon={icon}
-          title={title}
-          badge={badge}
-          description={description}
-          actions={actions}
-        />
+        showWorkspaceHero ? (
+          <NebulaModuleHeader
+            icon={icon}
+            title={title}
+            badge={badge}
+            description={description}
+            actions={actions}
+          />
+        ) : undefined
       }
       workspaceTabs={
         hasWorkspaces ? (

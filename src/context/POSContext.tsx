@@ -176,6 +176,8 @@ interface POSContextType {
   deleteExpense: (id: string) => void;
   deleteTransaction: (id: string) => void;
   recordInvoicePayment: (transactionId: string, amount: number, method: string) => void;
+  updatePurchaseOrderStatus: (transactionId: string, status: 'final' | 'draft' | 'ordered' | 'received' | 'pending') => void;
+  receivePurchaseOrder: (transactionId: string, notes?: string) => void;
   updateSettings: (newSettings: Partial<BusinessSettings>) => void;
   setCurrentLocation: (location: BusinessLocation) => void;
   openRegister: (openingCash: number) => void;
@@ -211,7 +213,20 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem('upos_transactions_v2');
-    return saved ? JSON.parse(saved) : initialTransactions;
+    if (saved) {
+      try {
+        const parsed: Transaction[] = JSON.parse(saved);
+        const hasPurchases = parsed.some(t => t.type === 'purchase');
+        if (!hasPurchases) {
+          const initialPurchases = initialTransactions.filter(t => t.type === 'purchase');
+          return [...parsed, ...initialPurchases];
+        }
+        return parsed;
+      } catch (e) {
+        return initialTransactions;
+      }
+    }
+    return initialTransactions;
   });
 
   const [expenses, setExpenses] = useState<Expense[]>(() => {
@@ -1372,6 +1387,33 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const updatePurchaseOrderStatus = (transactionId: string, status: 'final' | 'draft' | 'ordered' | 'received' | 'pending') => {
+    setTransactions(prev =>
+      prev.map(tx => {
+        if (tx.id === transactionId) {
+          return { ...tx, status };
+        }
+        return tx;
+      })
+    );
+  };
+
+  const receivePurchaseOrder = (transactionId: string, notes?: string) => {
+    setTransactions(prev =>
+      prev.map(tx => {
+        if (tx.id === transactionId) {
+          const updatedTx: Transaction = {
+            ...tx,
+            status: 'received',
+            notes: notes ? `${tx.notes ? tx.notes + ' | ' : ''}GRN: ${notes}` : tx.notes,
+          };
+          return updatedTx;
+        }
+        return tx;
+      })
+    );
+  };
+
   const openRegister = (openingCash: number) => {
     setCashRegister({
       id: `reg-${Date.now()}`,
@@ -1525,6 +1567,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteExpense,
         deleteTransaction,
         recordInvoicePayment,
+        updatePurchaseOrderStatus,
+        receivePurchaseOrder,
         updateSettings,
         setCurrentLocation,
         openRegister,

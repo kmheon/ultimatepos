@@ -1,16 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Truck, 
-  LayoutDashboard, 
-  FileSpreadsheet, 
-  Users, 
-  BarChart3,
-  Plus,
-  Receipt
-} from 'lucide-react';
+import { Truck, Plus } from 'lucide-react';
 import { usePOS } from '../../context/POSContext';
 import { ModuleHeader } from '../layout/ModuleHeader';
-import { WorkspaceNav, WorkspaceItem } from '../layout/WorkspaceNav';
 import { PurchasesList } from './PurchasesList';
 import { PurchaseDashboardView } from './PurchaseDashboardView';
 import { PurchaseRequisitionsView } from './PurchaseRequisitionsView';
@@ -28,15 +19,6 @@ interface PurchasesModuleViewProps {
 
 export const PurchasesModuleView: React.FC<PurchasesModuleViewProps> = ({ initialSubTab = 'dashboard' }) => {
   const [isAddOpen, setIsAddOpen] = useState(false);
-
-  const purchasesWorkspaces: WorkspaceItem[] = useMemo(() => [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Overall purchasing operations & quick actions', priority: 1 },
-    { id: 'orders', label: 'Purchase Orders', icon: Truck, description: 'Inbound supplier PO tracking & fulfillment', priority: 2 },
-    { id: 'requisitions', label: 'Requisitions', icon: FileSpreadsheet, description: 'Internal material requests & approvals', priority: 3 },
-    { id: 'suppliers', label: 'Suppliers', icon: Users, description: 'Vendor directory & SRM performance', priority: 4 },
-    { id: 'expenses', label: 'Expenses', icon: Receipt, description: 'Direct operational procurement expenditures', priority: 5 },
-    { id: 'reports', label: 'Reports', icon: BarChart3, description: 'In-depth procurement intelligence & analytics', priority: 6 },
-  ], []);
 
   const normalizedSubTab: PurchasesSubTab = useMemo(() => {
     if (!initialSubTab) return 'dashboard';
