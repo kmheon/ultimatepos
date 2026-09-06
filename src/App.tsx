@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { POSProvider, usePOS } from './context/POSContext';
+import { CRMProvider } from './context/CRMContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { POSTerminal } from './components/pos/POSTerminal';
@@ -106,8 +107,8 @@ const MainContent: React.FC = () => {
           {activeTab === 'labels' && <InventoryModuleView initialSubTab="labels" />}
 
           {/* CRM Module */}
-          {(activeTab === 'crm' || activeTab === 'contacts') && (
-            <CRMModuleView initialSubTab={initialSubTab || 'customers'} />
+          {(activeTab === 'crm' || activeTab === 'contacts' || activeTab === 'customers' || activeTab === 'organizations' || activeTab === 'leads' || activeTab === 'projects') && (
+            <CRMModuleView initialSubTab={initialSubTab || (activeTab === 'crm' ? 'dashboard' : activeTab as any)} />
           )}
 
           {/* Finance Module */}
@@ -185,7 +186,9 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <POSProvider>
-        <MainContent />
+        <CRMProvider>
+          <MainContent />
+        </CRMProvider>
       </POSProvider>
     </QueryClientProvider>
   );

@@ -173,8 +173,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
         { id: 'customers', label: 'Customers' },
         { id: 'organizations', label: 'Organizations' },
         { id: 'contacts', label: 'Contacts' },
-        { id: 'leads', label: 'Leads' },
-        { id: 'projects', label: 'Projects' },
+        { id: 'leads', label: 'Leads & Pipeline' },
+        { id: 'projects', label: 'Projects & AMC' },
         { id: 'reports', label: 'Reports' },
       ]
     },

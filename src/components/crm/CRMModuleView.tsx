@@ -2,27 +2,33 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, 
   LayoutDashboard, 
-  UserCheck, 
   Building2, 
   Contact, 
-  Sparkles, 
-  Briefcase, 
+  FolderKanban, 
+  Wrench, 
   BarChart3,
-  Plus,
-  Mail,
-  Phone,
-  CheckCircle2,
-  Clock,
-  DollarSign
+  Plus
 } from 'lucide-react';
 import { usePOS } from '../../context/POSContext';
+import { useCRM } from '../../context/CRMContext';
 import { ModuleHeader } from '../layout/ModuleHeader';
-import { WorkspaceNav, WorkspaceItem } from '../layout/WorkspaceNav';
-import { ContactsList } from '../contacts/ContactsList';
-import { QuotationsView } from '../quotations/QuotationsView';
-import { ReportsView } from '../reports/ReportsView';
-import { AddContactModal } from '../contacts/AddContactModal';
 import { updateBrowserURL } from '../../utils/navigationRouter';
+import { Contact as ContactType, CRMLead, CRMLeadStage, CRMOrganization, CRMProject } from '../../types';
+
+// Views
+import { CRMDashboardView } from './CRMDashboardView';
+import { CRMCustomersView } from './CRMCustomersView';
+import { CRMOrganizationsView } from './CRMOrganizationsView';
+import { CRMContactsDirectoryView } from './CRMContactsDirectoryView';
+import { CRMLeadsPipelineView } from './CRMLeadsPipelineView';
+import { CRMProjectsAMCView } from './CRMProjectsAMCView';
+import { CRMReportsAnalyticsView } from './CRMReportsAnalyticsView';
+
+// Modals
+import { AddContactModal } from '../contacts/AddContactModal';
+import { AddEditLeadModal } from './AddEditLeadModal';
+import { AddEditOrganizationModal } from './AddEditOrganizationModal';
+import { AddEditProjectModal } from './AddEditProjectModal';
 
 export type CRMSubTab = 
   | 'dashboard' 
@@ -37,32 +43,22 @@ interface CRMModuleViewProps {
   initialSubTab?: string;
 }
 
-export const CRMModuleView: React.FC<CRMModuleViewProps> = ({ initialSubTab = 'customers' }) => {
-  const { contacts, quotations, repairJobSheets } = usePOS();
-  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
-  const [activeWorkspace, setActiveWorkspace] = useState('executive');
+export const CRMModuleView: React.FC<CRMModuleViewProps> = ({ initialSubTab = 'dashboard' }) => {
+  const { setActiveTab } = usePOS();
+  const { leads, organizations, projects } = useCRM();
 
-  const crmWorkspaces: WorkspaceItem[] = useMemo(() => [
-    { id: 'executive', label: 'Executive', icon: BarChart3, description: 'CRM pipeline & relationship metrics', priority: 1 },
-    { id: 'customers', label: 'Customers', icon: UserCheck, description: 'Retail customer demographic breakdown', priority: 2 },
-    { id: 'organizations', label: 'Organizations', icon: Building2, description: 'B2B enterprise partners & accounts', priority: 3 },
-    { id: 'projects', label: 'Projects', icon: Briefcase, description: 'AMC contracts & deployment projects', priority: 4 },
-    { id: 'leads', label: 'Leads', icon: Sparkles, description: 'Sales quotations & deal conversion pipeline', priority: 5 },
-    { id: 'activity', label: 'Activity', icon: Clock, description: 'Client communications & support logs', priority: 6 },
-    { id: 'revenue', label: 'Revenue', icon: DollarSign, description: 'Account lifetime value & billings', priority: 7 },
-  ], []);
-
+  // Normalize route param to sub tab
   const normalizedSubTab: CRMSubTab = useMemo(() => {
-    if (!initialSubTab) return 'customers';
+    if (!initialSubTab) return 'dashboard';
     const clean = initialSubTab.toLowerCase().replace(/_/g, '-');
     if (['dashboard', 'overview'].includes(clean)) return 'dashboard';
     if (['customers', 'customer', 'clients'].includes(clean)) return 'customers';
     if (['organizations', 'organization', 'b2b', 'companies'].includes(clean)) return 'organizations';
     if (['contacts', 'all-contacts', 'directory'].includes(clean)) return 'contacts';
-    if (['leads', 'lead', 'prospects', 'quotations'].includes(clean)) return 'leads';
+    if (['leads', 'lead', 'prospects', 'deals', 'pipeline'].includes(clean)) return 'leads';
     if (['projects', 'project', 'contracts', 'amc'].includes(clean)) return 'projects';
-    if (['reports', 'analytics'].includes(clean)) return 'reports';
-    return 'customers';
+    if (['reports', 'analytics', 'telemetry'].includes(clean)) return 'reports';
+    return 'dashboard';
   }, [initialSubTab]);
 
   const [activeSubTab, setActiveSubTab] = useState<CRMSubTab>(normalizedSubTab);
@@ -77,8 +73,118 @@ export const CRMModuleView: React.FC<CRMModuleViewProps> = ({ initialSubTab = 'c
     updateBrowserURL('crm', nextTab);
   };
 
-  const customerList = useMemo(() => contacts.filter(c => c.type === 'customer' || c.type === 'both'), [contacts]);
-  const supplierList = useMemo(() => contacts.filter(c => c.type === 'supplier' || c.type === 'both'), [contacts]);
+  // Modal State Management
+  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<ContactType | null>(null);
+
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<CRMLead | null>(null);
+  const [leadDefaultStage, setLeadDefaultStage] = useState<CRMLeadStage>('new');
+
+  const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<CRMOrganization | null>(null);
+
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<CRMProject | null>(null);
+
+  // Subtab definition for internal navbar
+  const subTabs = [
+    { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'customers' as const, label: 'Customers', icon: Users },
+    { id: 'organizations' as const, label: 'Organizations (B2B)', icon: Building2, count: organizations.length },
+    { id: 'contacts' as const, label: 'Contacts Directory', icon: Contact },
+    { id: 'leads' as const, label: 'Leads & Pipeline', icon: FolderKanban, count: leads.filter(l => l.stage !== 'lost').length },
+    { id: 'projects' as const, label: 'Projects & AMC', icon: Wrench, count: projects.length },
+    { id: 'reports' as const, label: 'Reports & Analytics', icon: BarChart3 },
+  ];
+
+  // Quick Action Handlers
+  const handleOpenNewLead = (stage: CRMLeadStage = 'new') => {
+    setEditingLead(null);
+    setLeadDefaultStage(stage);
+    setIsLeadModalOpen(true);
+  };
+
+  const handleEditLead = (lead: CRMLead) => {
+    setEditingLead(lead);
+    setIsLeadModalOpen(true);
+  };
+
+  const handleOpenNewOrg = () => {
+    setEditingOrg(null);
+    setIsOrgModalOpen(true);
+  };
+
+  const handleEditOrg = (org: CRMOrganization) => {
+    setEditingOrg(org);
+    setIsOrgModalOpen(true);
+  };
+
+  const handleCreateLeadForOrg = (org: CRMOrganization) => {
+    setEditingLead({
+      id: '',
+      title: `${org.name} - Enterprise Solution Expansion`,
+      companyName: org.name,
+      contactName: org.contactPersonName,
+      email: org.email,
+      mobile: org.phone,
+      dealValue: 25000,
+      stage: 'qualified',
+      probability: 60,
+      priority: 'high',
+      source: 'referral',
+      assignedTo: 'Zubair Hossain',
+      expectedCloseDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      createdAt: new Date().toISOString().split('T')[0],
+      notes: `Lead initiated from corporate account ${org.name}.`,
+      tags: ['B2B', org.industry]
+    });
+    setIsLeadModalOpen(true);
+  };
+
+  const handleCreateProjectForOrg = (org: CRMOrganization) => {
+    setEditingProject({
+      id: '',
+      projectNumber: `AMC-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+      title: `${org.name} Annual Maintenance Contract`,
+      clientId: org.id,
+      clientName: org.name,
+      clientType: 'b2b',
+      type: 'amc_maintenance',
+      contractTier: org.amcTier === 'enterprise_platinum' ? 'Enterprise Platinum 24/7' : 'Standard Business SLA',
+      contractValue: 48000,
+      billingCycle: 'quarterly',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
+      renewalStatus: 'active',
+      slaLevel: '24_7_dedicated',
+      visitsCompleted: 0,
+      totalVisitsPlanned: 4,
+      progress: 0,
+      projectLead: 'Engr. Tanvir Ahmed'
+    });
+    setIsProjectModalOpen(true);
+  };
+
+  const handleOpenNewProject = () => {
+    setEditingProject(null);
+    setIsProjectModalOpen(true);
+  };
+
+  const handleEditProject = (project: CRMProject) => {
+    setEditingProject(project);
+    setIsProjectModalOpen(true);
+  };
+
+  const handleOpenAddCustomer = () => {
+    setEditingContact(null);
+    setIsAddContactOpen(true);
+  };
+
+  const handleEditCustomer = (customer: ContactType) => {
+    setEditingContact(customer);
+    setIsAddContactOpen(true);
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
@@ -86,148 +192,123 @@ export const CRMModuleView: React.FC<CRMModuleViewProps> = ({ initialSubTab = 'c
       <ModuleHeader
         icon={Users}
         title="Customer Relationship Management (CRM)"
-        badge="Client Relations"
-        subtitle="Customer directories, B2B corporate client profiles, supplier network, and sales communication"
+        badge="Enterprise CRM"
+        subtitle="End-to-end sales pipeline, B2B corporate contracts, annual maintenance agreements (AMC), and retail customer intelligence"
         actions={
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsAddContactOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer shadow-blue-200"
+              onClick={() => handleOpenNewLead('new')}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer shadow-blue-200"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Contact</span>
+              <span>New Opportunity</span>
+            </button>
+            <button
+              onClick={handleOpenNewOrg}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer shadow-indigo-200"
+            >
+              <Building2 className="w-4 h-4" />
+              <span>New B2B Account</span>
             </button>
           </div>
         }
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+
+
+      {/* Content Area Rendering the Active Sub-Page */}
+      <div className={`flex-1 ${activeSubTab === 'reports' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto p-6'}`}>
         {activeSubTab === 'dashboard' && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Customer Accounts</span>
-                <div className="text-2xl font-black text-slate-900 mt-2">
-                  {customerList.length} Accounts
-                </div>
-                <p className="text-xs text-slate-500 mt-1">Direct consumers & retail accounts</p>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">B2B Organizations</span>
-                <div className="text-2xl font-black text-blue-600 mt-2">
-                  {supplierList.length} Partners
-                </div>
-                <p className="text-xs text-slate-500 mt-1">Corporate vendors & institutions</p>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Open Leads & Quotations</span>
-                <div className="text-2xl font-black text-amber-600 mt-2">
-                  {quotations.length} Prospects
-                </div>
-                <p className="text-xs text-slate-500 mt-1">Pipeline deal proposals</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Top Client Accounts</h3>
-                  <p className="text-xs text-slate-500">Recently active corporate & retail customers</p>
-                </div>
-                <button
-                  onClick={() => handleTabChange('customers')}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-800"
-                >
-                  View All Clients →
-                </button>
-              </div>
-
-              <div className="divide-y divide-slate-100 text-xs">
-                {customerList.slice(0, 5).map(c => (
-                  <div key={c.id} className="py-3 flex items-center justify-between">
-                    <div>
-                      <span className="font-bold text-slate-900">{c.name}</span>
-                      <p className="text-slate-400 text-[11px]">{c.mobile || c.email} • {c.city || 'Standard Group'}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
-                        {c.type.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <CRMDashboardView
+            onOpenNewLead={() => handleOpenNewLead('new')}
+            onOpenNewOrg={handleOpenNewOrg}
+            onOpenNewProject={handleOpenNewProject}
+            onOpenNewCustomer={handleOpenAddCustomer}
+          />
         )}
 
         {activeSubTab === 'customers' && (
-          <div className="flex-1 overflow-y-auto p-6">
-            <ContactsList />
-          </div>
+          <CRMCustomersView
+            onOpenAddCustomer={handleOpenAddCustomer}
+            onEditCustomer={handleEditCustomer}
+          />
         )}
 
         {activeSubTab === 'organizations' && (
-          <div className="flex-1 overflow-y-auto p-6">
-            <ContactsList />
-          </div>
+          <CRMOrganizationsView
+            onOpenAddOrg={handleOpenNewOrg}
+            onEditOrg={handleEditOrg}
+            onCreateLeadForOrg={handleCreateLeadForOrg}
+            onCreateProjectForOrg={handleCreateProjectForOrg}
+          />
         )}
 
         {activeSubTab === 'contacts' && (
-          <div className="flex-1 overflow-y-auto p-6">
-            <ContactsList />
-          </div>
+          <CRMContactsDirectoryView
+            onOpenAddContact={handleOpenAddCustomer}
+            onEditContact={handleEditCustomer}
+          />
         )}
 
         {activeSubTab === 'leads' && (
-          <div className="flex-1 overflow-y-auto p-6">
-            <QuotationsView />
-          </div>
+          <CRMLeadsPipelineView
+            onOpenNewLead={handleOpenNewLead}
+            onEditLead={handleEditLead}
+            onConvertToQuote={lead => {
+              setActiveTab('quotations');
+            }}
+          />
         )}
 
         {activeSubTab === 'projects' && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6">
-              <h3 className="font-bold text-slate-900 text-sm mb-1">Corporate Client Projects & AMC Contracts</h3>
-              <p className="text-xs text-slate-500 mb-4">Annual maintenance agreements and enterprise deployment contracts</p>
-
-              <div className="space-y-3 text-xs">
-                {repairJobSheets.slice(0, 4).map(job => (
-                  <div key={job.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between">
-                    <div>
-                      <span className="font-bold text-slate-900">{job.customerName} — {job.deviceBrand} Maintenance</span>
-                      <p className="text-slate-400 text-[11px]">Model: {job.deviceModel || 'Enterprise Asset'} • Tech: {job.technicianAssigned || 'Field Squad'}</p>
-                    </div>
-                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-lg border border-emerald-200 text-[10px]">
-                      Active AMC Contract
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <CRMProjectsAMCView
+            onOpenNewProject={handleOpenNewProject}
+            onEditProject={handleEditProject}
+          />
         )}
 
         {activeSubTab === 'reports' && (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <WorkspaceNav
-              workspaces={crmWorkspaces}
-              activeWorkspace={activeWorkspace}
-              onWorkspaceChange={setActiveWorkspace}
-            />
-            <div className="flex-1 overflow-y-auto p-6">
-              <ReportsView initialReportTab="crm" />
-            </div>
-          </div>
+          <CRMReportsAnalyticsView />
         )}
       </div>
 
-      {isAddContactOpen && (
-        <AddContactModal isOpen={isAddContactOpen} onClose={() => setIsAddContactOpen(false)} />
-      )}
+      {/* Shared Modals */}
+      <AddContactModal
+        isOpen={isAddContactOpen}
+        onClose={() => {
+          setIsAddContactOpen(false);
+          setEditingContact(null);
+        }}
+        contactToEdit={editingContact}
+      />
+
+      <AddEditLeadModal
+        isOpen={isLeadModalOpen}
+        onClose={() => {
+          setIsLeadModalOpen(false);
+          setEditingLead(null);
+        }}
+        editingLead={editingLead}
+        defaultStage={leadDefaultStage}
+      />
+
+      <AddEditOrganizationModal
+        isOpen={isOrgModalOpen}
+        onClose={() => {
+          setIsOrgModalOpen(false);
+          setEditingOrg(null);
+        }}
+        editingOrg={editingOrg}
+      />
+
+      <AddEditProjectModal
+        isOpen={isProjectModalOpen}
+        onClose={() => {
+          setIsProjectModalOpen(false);
+          setEditingProject(null);
+        }}
+        editingProject={editingProject}
+      />
     </div>
   );
 };

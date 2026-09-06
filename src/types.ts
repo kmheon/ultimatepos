@@ -743,7 +743,150 @@ export type ActiveTab =
   | 'inventory'
   | 'procurement'
   | 'crm'
+  | 'customers'
+  | 'organizations'
+  | 'leads'
+  | 'projects'
   | 'finance'
   | 'marketplace'
   | 'integrations';
+
+// ==========================================
+// CRM Enterprise Module Models
+// ==========================================
+
+export type CRMLeadStage = 
+  | 'new'
+  | 'contacted'
+  | 'qualified'
+  | 'proposal'
+  | 'negotiation'
+  | 'won'
+  | 'lost';
+
+export type CRMLeadSource = 
+  | 'website'
+  | 'referral'
+  | 'cold_call'
+  | 'in_store'
+  | 'partner'
+  | 'exhibition'
+  | 'campaign';
+
+export type CRMLeadPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export interface CRMLead {
+  id: string;
+  title: string;
+  contactName: string;
+  companyName: string;
+  email: string;
+  mobile: string;
+  dealValue: number;
+  stage: CRMLeadStage;
+  probability: number; // 0 - 100
+  source: CRMLeadSource;
+  priority: CRMLeadPriority;
+  assignedTo: string;
+  expectedCloseDate: string;
+  notes: string;
+  createdAt: string;
+  tags: string[];
+  lastContactedAt?: string;
+}
+
+export type CRMOrgStatus = 'active' | 'on_hold' | 'inactive';
+export type CRMPaymentTerms = 'due_on_receipt' | 'net15' | 'net30' | 'net60';
+export type CRMAMCTier = 'enterprise_platinum' | 'gold_partner' | 'silver_support' | 'standard' | 'none';
+
+export interface CRMOrganization {
+  id: string;
+  name: string;
+  binOrTaxNumber: string;
+  industry: string;
+  contactPersonName: string;
+  contactPersonRole: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state?: string;
+  country?: string;
+  creditLimit: number;
+  paymentTerms: CRMPaymentTerms;
+  amcTier: CRMAMCTier;
+  status: CRMOrgStatus;
+  accountManager: string;
+  totalRevenue: number;
+  activeContractsCount: number;
+  notes?: string;
+  createdAt: string;
+  logoUrl?: string;
+}
+
+export type CRMProjectType = 
+  | 'amc_maintenance'
+  | 'infrastructure_deployment'
+  | 'hardware_rollout'
+  | 'custom_integration'
+  | 'field_support';
+
+export type CRMProjectRenewalStatus = 
+  | 'active'
+  | 'expiring_soon'
+  | 'expired'
+  | 'renewed'
+  | 'pending';
+
+export type CRMSLALevel = 
+  | '24_7_dedicated'
+  | '4hr_onsite'
+  | 'next_business_day'
+  | 'standard_48hr';
+
+export interface CRMProject {
+  id: string;
+  projectNumber: string;
+  title: string;
+  clientName: string;
+  clientId?: string;
+  clientType: 'b2b' | 'retail';
+  type: CRMProjectType;
+  contractTier: string;
+  startDate: string;
+  endDate: string;
+  renewalStatus: CRMProjectRenewalStatus;
+  contractValue: number;
+  billingCycle: 'annual' | 'quarterly' | 'monthly' | 'one_time';
+  slaLevel: CRMSLALevel;
+  projectLead: string;
+  progress: number; // 0 - 100
+  notes?: string;
+  visitsCompleted: number;
+  totalVisitsPlanned: number;
+  lastServiceDate?: string;
+  nextServiceDate?: string;
+}
+
+export type CRMActivityType = 
+  | 'call'
+  | 'meeting'
+  | 'email'
+  | 'quote_sent'
+  | 'contract_signed'
+  | 'site_visit'
+  | 'note';
+
+export interface CRMActivity {
+  id: string;
+  title: string;
+  type: CRMActivityType;
+  entityType: 'customer' | 'lead' | 'organization' | 'project';
+  entityId: string;
+  entityName: string;
+  date: string;
+  notes: string;
+  createdBy: string;
+}
+
 
