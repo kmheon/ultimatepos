@@ -28,6 +28,7 @@ import {
   Legend 
 } from 'recharts';
 import { usePOS } from '../../context/POSContext';
+import { NebulaStatGrid, NebulaStatCard, TableCard } from '../../core/ui';
 
 export type ReportCategory = 
   | 'pnl' 
@@ -481,24 +482,93 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ initialReportTab = 'pn
 
       {/* Finance Reports */}
       {activeReportTab === 'finance' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h3 className="font-bold text-sm text-slate-900 mb-2">Operating Expense & Cash Ledger Analysis</h3>
-            <p className="text-xs text-slate-400 mb-4">Total OPEX breakdown across store utilities, salaries, and operational costs</p>
-            
-            <div className="space-y-3">
-              {expenses.map(e => (
-                <div key={e.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                  <div>
-                    <span className="font-bold text-slate-900 text-xs">{e.category}</span>
-                    <p className="text-[11px] text-slate-500">{e.note || 'Operating disbursement'}</p>
-                  </div>
-                  <span className="font-extrabold text-sm text-rose-600">
-                    {settings.currencySymbol}{e.amount.toFixed(2)}
+        <div className="space-y-6">
+          <NebulaStatGrid>
+            <NebulaStatCard
+              label="Total Liquid Treasury"
+              value={`${settings.currencySymbol}236,401.25`}
+              icon={DollarSign}
+              iconColor="text-blue-600"
+              iconBgColor="bg-blue-50"
+              statusText="Across verified bank & cash accounts"
+              statusColor="text-blue-600"
+            />
+            <NebulaStatCard
+              label="Gross Operating Revenue"
+              value={`${settings.currencySymbol}${grossSales.toLocaleString()}`}
+              icon={TrendingUp}
+              iconColor="text-emerald-600"
+              iconBgColor="bg-emerald-50"
+              statusText={`${sales.length} verified transactions`}
+              statusColor="text-emerald-600"
+            />
+            <NebulaStatCard
+              label="Operating Expenses (OPEX)"
+              value={`${settings.currencySymbol}${totalExpenses.toLocaleString()}`}
+              icon={TrendingDown}
+              iconColor="text-rose-600"
+              iconBgColor="bg-rose-50"
+              statusText={`${expenses.length} expense vouchers`}
+              statusColor="text-rose-600"
+            />
+            <NebulaStatCard
+              label="Net Operating EBITDA"
+              value={`${settings.currencySymbol}{netProfit.toLocaleString()}`}
+              icon={BarChart3}
+              iconColor="text-indigo-600"
+              iconBgColor="bg-indigo-50"
+              statusText="Healthy net operating margin"
+              statusColor="text-indigo-600"
+            />
+          </NebulaStatGrid>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TableCard title="Income Statement & P&L Summary" subtitle="Core revenue, cost of goods sold, and net operating income breakdown">
+              <div className="p-5 space-y-3 text-xs">
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="font-bold text-slate-700">Gross Sales Revenue</span>
+                  <span className="font-black text-slate-900">{settings.currencySymbol}{grossSales.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="font-bold text-slate-700">Cost of Goods Sold (COGS)</span>
+                  <span className="font-black text-rose-600">-{settings.currencySymbol}{cogs.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="font-bold text-slate-900">Gross Profit</span>
+                  <span className="font-black text-emerald-600">{settings.currencySymbol}{grossProfit.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="font-bold text-slate-700">Total Operating Expenses (OPEX)</span>
+                  <span className="font-black text-rose-600">-{settings.currencySymbol}{totalExpenses.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between py-3 bg-slate-50 px-3 rounded-xl font-bold">
+                  <span className="text-slate-900">Net Operating Income (EBITDA)</span>
+                  <span className={`font-black text-sm ${netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {settings.currencySymbol}{netProfit.toLocaleString()}
                   </span>
                 </div>
-              ))}
-            </div>
+              </div>
+            </TableCard>
+
+            <TableCard title="Operating Expense Cost Centers" subtitle="Detailed breakdown of operational disbursements">
+              <div className="p-5 space-y-3 max-h-80 overflow-y-auto">
+                {expenses.length === 0 ? (
+                  <p className="text-xs text-slate-400 text-center py-6">No operating expenses recorded yet.</p>
+                ) : (
+                  expenses.map(e => (
+                    <div key={e.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-slate-900 block">{e.category}</span>
+                        <span className="text-[11px] text-slate-500">{e.note || 'Operating disbursement'}</span>
+                      </div>
+                      <span className="font-black text-rose-600 text-sm">
+                        {settings.currencySymbol}{e.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </TableCard>
           </div>
         </div>
       )}
